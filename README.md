@@ -27,12 +27,20 @@ foobar2000 的 UPnP 输出……** 都能用；Windows 上还能读**电脑自�
 
 ```bash
 git clone https://github.com/ChandlerYancug/LyriCast.git && cd LyriCast
-py -3 -m pip install -r requirements.txt
-run.bat            # Windows；其它平台： python3 main.py
+run.bat            # Windows：首次双击会自动建 .venv、装依赖，然后启动
 ```
 
-> **装不上依赖？**（国内访问 PyPI 慢 / 超时）换清华镜像再试：
-> `py -3 -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple`
+macOS / Linux：
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python main.py
+```
+
+> **装不上依赖？**（国内访问 PyPI 慢 / 超时）在仓库目录里换清华镜像再装一次：
+> `.venv\Scripts\python -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple`
+> （`run.bat` 安装失败时也会把这条打印出来）
 >
 > **提示找不到 Python？** 去 <https://www.python.org/downloads/> 下载安装，
 > 安装时勾选 “Add python.exe to PATH”，之后直接双击 `run.bat` 即可。
@@ -71,8 +79,9 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 
 - Python **3.11+**（CI 在 3.11 / 3.13 上验证；更老的版本没测过）
 - 必需：`PyQt6` / `requests` / `pillow`，以及 `browser_cookie3`（只被
-  `get_apple_token.py` 用到，不配 Apple 凭证就轮不到它）—— 换电脑时一条命令全装：
-  `py -3 -m pip install -r requirements.txt`
+  `get_apple_token.py` 用到）。它们全部装在**项目自己的 `.venv` 虚拟环境**里
+  （`run.bat` 首次运行自动创建），**不碰系统全局 Python**；想彻底卸载，删掉
+  `.venv` 目录即可
 - 可选（按需装，在仓库目录里执行）：`pip install -e ".[smtc]"`（Windows 系统媒体会话）、
   `.[dev]`（测试与 lint）；`.[listen]`（麦克风指纹，路线图）；见 `pyproject.toml`
 - 字体：**开箱即用** —— 仓库随带 OFL 开源字体（拉丁 [Inter]，中文思源黑体子集
@@ -347,13 +356,9 @@ Apple 的歌词是官方 TTML 数据：**逐词**带精确起止时间（白色�
 自己账号的凭证（`am_token.txt`）：
 
 1. **浏览器里登录** <https://music.apple.com>（保持登录状态）；
-2. **在项目目录运行**（需要 `browser_cookie3`，按 README 装过 `requirements.txt` 就有）：
-
-   ```bash
-   py -3 get_apple_token.py
-   ```
-
-   脚本会从 Chrome / Edge / Firefox 里读出 `media-user-token` 并写入 `am_token.txt`；
+2. **双击 `get_apple_token.bat`**（最省事；或者托盘菜单 →「Apple Music 凭证（逐词/翻译）…」
+   →「自动获取」）。脚本会从 Chrome / Edge / Firefox 里读出 `media-user-token`
+   并写入 `am_token.txt`；
 3. **重启 LyriCast**。
 
 读不到浏览器 cookie 时（新版浏览器会加密），手动来：F12 → Application →
@@ -448,7 +453,7 @@ Sonos 多房间或立体声配对时，**从机（slave）的接口不报告曲�
 - **逐词同步取决于 Apple 源**：主流流行歌大多有逐词数据（syllable-lyrics），
   没有的歌会自动回退到逐行同步，依然流畅；
 - Apple 源的凭证（`am_token.txt`）几个月会过期一次；过期后歌词会自动回退到
-  其它源，重新运行 `get_apple_token.py` 恢复。
+  其它源，重新双击 `get_apple_token.bat`（或托盘菜单里「自动获取」）恢复。
 - 如果歌词整体偏早/偏晚，用右键菜单的「延后 / 提前」微调，一劳永逸。
 - 网络电台、广告时段拿不到干净的曲名歌手，匹配不到是正常的。
 - 歌词有版权，**自己用没问题，别公开分发**。
@@ -475,7 +480,8 @@ Sonos 多房间或立体声配对时，**从机（slave）的接口不报告曲�
 ## 开发
 
 ```bash
-pip install -e ".[dev]"        # 跑测试要 Pillow；smtc 额外：.[smtc]
+py -3 -m venv .venv                                  # 可选：开发也用 .venv
+.venv\Scripts\python -m pip install -e ".[dev]"      # 跑测试要 Pillow；smtc 额外：.[smtc]
 ruff check .                   # 静态检查（配置在 pyproject）
 pytest -q                      # 离线测试（假 DLNA 音箱 / SMTC 假会话 / 轮询链路）
 QT_QPA_PLATFORM=offscreen pytest -q   # 无显示环境下
@@ -513,7 +519,8 @@ LyriCast/
 ├── fullscreen.py  全屏歌词模式（旋转黑胶 + 模糊封面背景）
 ├── config.example.json  配置模板（真配置 config.json 不进仓库）
 ├── am_token.txt   Apple Music 凭证（自己可见，别外传；不进仓库）
-├── get_apple_token.py   一键刷新 Apple 凭证
+├── get_apple_token.py   一键刷新 Apple 凭证（写 am_token.txt）
+├── get_apple_token.bat  Windows 双击版：一键刷新 Apple 凭证
 ├── fonts/         随包字体（Inter + 思源黑体子集，均为 OFL 开源；SF Pro 自备不随仓库）
 ├── cache/         歌词 / 封面缓存（自动生成，不进仓库）
 ├── tests/         离线测试（假 DLNA 音箱 / SMTC 假会话 / 轮询链路）
@@ -521,7 +528,8 @@ LyriCast/
 ├── docs/images/   README 用的截图与演示动图（dev/make_shots.py 生成）
 ├── .github/       CI（3 OS × 2 Python）与 issue / PR 模板
 ├── pyproject.toml / requirements.txt
-├── run.bat        启动（Windows）
+├── run.bat        启动（Windows；首次自动建 .venv 并装依赖，不污染系统 Python）
+├── .venv/         依赖虚拟环境（run.bat 自动生成，不进仓库）
 └── dev/           开发辅助（日常不用动）
     ├── make_shots.py      生成 docs/images/（截图 + 演示动图）
     ├── _preview.py        渲染效果预览图（输出到根目录 preview_lyrics_style.png）
@@ -555,9 +563,14 @@ LyriCast/
 
 ```bash
 git clone https://github.com/ChandlerYancug/LyriCast.git && cd LyriCast
-py -3 -m pip install -r requirements.txt
-python main.py            # or run.bat on Windows
+run.bat                   # Windows: creates .venv, installs deps, then runs
+python3 -m venv .venv     # macOS / Linux
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python main.py
 ```
+
+Dependencies live in a project-local `.venv` (your system Python is never
+touched; delete the folder to uninstall).
 
 No encoding setup needed on Chinese Windows (output is forced to UTF-8).
 Slow PyPI? add a mirror: `-i https://pypi.tuna.tsinghua.edu.cn/simple`.

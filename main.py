@@ -834,16 +834,58 @@ class LyriCastApp(QObject):
 
     def _show_apple_token_help(self):
         """托盘菜单：逐词歌词 / 翻译需要配置 Apple Music 凭证。"""
-        QMessageBox.information(
-            None, "%s · Apple Music 凭证" % speakers.APP_NAME,
-            "想要逐词歌词和中文翻译，需要配置一次 Apple Music 凭证：\n\n"
-            "1. 浏览器登录 https://music.apple.com（保持登录）；\n"
-            "2. 在本项目目录运行：  py -3 get_apple_token.py\n"
-            "   （读不到浏览器 cookie 时按脚本提示，手动复制\n"
-            "     media-user-token 的值存成 am_token.txt）\n"
-            "3. 重启本程序。\n\n"
-            "凭证有效期几个月，过期后重跑第 2 步即可。\n"
+        box = QMessageBox()
+        box.setWindowTitle("%s · Apple Music 凭证" % speakers.APP_NAME)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setText(
+            "想要逐词歌词和中文翻译，需要配置一次 Apple Music 凭证。\n\n"
+            "点「自动获取」→ 从浏览器里读出凭证\n"
+            "（浏览器需先登录 music.apple.com）；\n"
+            "读不到时会给出手动复制的步骤。\n\n"
             "没有凭证也能用，只是没有逐词高亮和翻译（退回普通歌词）。")
+        box.setDetailedText(
+            "手动步骤：\n"
+            "1. 浏览器登录 https://music.apple.com（保持登录）；\n"
+            "2. F12 → Application → Cookies → https://music.apple.com\n"
+            "   → 复制 media-user-token 的值；\n"
+            "3. 存成项目目录下的 am_token.txt（整个文件就这一行）；\n"
+            "4. 重启本程序。\n\n"
+            "凭证有效期几个月，过期后重做一次即可。")
+        auto_btn = box.addButton("自动获取（推荐）",
+                                 QMessageBox.ButtonRole.AcceptRole)
+        box.addButton("关闭", QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is auto_btn:
+            self._fetch_apple_token()
+
+    def _fetch_apple_token(self):
+        """跑 get_apple_token.py 取凭证（浏览器 cookie）；成功后自动重抓歌词。"""
+        script = os.path.join(BASE_DIR, "get_apple_token.py")
+        if not os.path.exists(script):
+            QMessageBox.warning(None, "Apple Music 凭证",
+                                "找不到 get_apple_token.py（被删了？）")
+            return
+        import subprocess
+        self.log.info("运行 get_apple_token.py 取 Apple 凭证…")
+        try:
+            proc = subprocess.run(
+                [sys.executable, script], capture_output=True, text=True,
+                encoding="utf-8", errors="replace", timeout=90, cwd=BASE_DIR)
+        except Exception as exc:
+            QMessageBox.warning(None, "Apple Music 凭证", "运行失败：%r" % (exc,))
+            return
+        out = ((proc.stdout or "") + (proc.stderr or "")).strip()
+        head = (out + "\n\n") if out else ""
+        if proc.returncode == 0:
+            self._apple_hint_shown = True
+            self.log.info("Apple 凭证已更新")
+            QMessageBox.information(None, "Apple Music 凭证",
+                                    head + "已保存 am_token.txt，马上重新抓歌词…")
+            self.relyrics()
+        else:
+            self.log.warning("取 Apple 凭证失败：%s", out.replace("\n", " "))
+            QMessageBox.warning(None, "Apple Music 凭证",
+                                head + "没拿到凭证。可以按下方说明手动复制。")
 
     def _on_speaker_lost(self, msg):
         """连续读不到音箱：重新发现（节流，避免设备真关机时反复搜索）。"""
