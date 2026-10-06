@@ -19,6 +19,12 @@ import time
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
 
+try:                                  # 中文 Windows 默认 GBK:输出流切 UTF-8
+    from utf8mode import ensure_utf8
+    ensure_utf8()
+except Exception:                     # 极端情况(如只拷了 main.py):别影响启动
+    pass
+
 
 def _check_qt():
     """PyQt6 装坏了（版本不匹配）时给个人话提示，别丢一堆 traceback。"""
@@ -37,7 +43,9 @@ if not _qt_ok:
         _name = "LyriCast"
     msg = (
         "PyQt6 无法加载：\n%s\n\n"
-        "请打开命令行执行：py -3 -m pip install --upgrade PyQt6"
+        "请打开命令行执行：py -3 -m pip install --upgrade PyQt6\n"
+        "（国内网络慢/超时的话加清华镜像："
+        "-i https://pypi.tuna.tsinghua.edu.cn/simple）"
     ) % _qt_err
     try:
         import ctypes

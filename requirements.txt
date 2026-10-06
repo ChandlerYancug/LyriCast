@@ -1,8 +1,9 @@
-# 核心依赖（音箱后端泛化后的最小安装）。
-# 换电脑时，执行：  py -3 -m pip install -r requirements.txt
+# LyriCast core dependencies.
+# Install with:  py -3 -m pip install -r requirements.txt
+# (China / slow network: append  -i https://pypi.tuna.tsinghua.edu.cn/simple )
 #
-# 可选依赖都在 pyproject.toml 的 extras 里，不需要可以不装：
-#   pip install -e ".[listen]"   # 麦克风 + 音频指纹（路线图，见 docs/BACKENDS.md）
+# Optional extras live in pyproject.toml, install from the repo root:
+#   pip install -e ".[listen]"   # mic + audio fingerprint (roadmap, see docs/BACKENDS.md)
 #   pip install -e ".[dev]"      # pytest / ruff
 PyQt6>=6.5
 requests>=2.28

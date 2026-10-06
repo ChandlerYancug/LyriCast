@@ -44,6 +44,7 @@ py-modules = [
     "overlay",
     "fullscreen",
     "vinyl",
+    "utf8mode",
 ]
 packages = ["speakers"]
 

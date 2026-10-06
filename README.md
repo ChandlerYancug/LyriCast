@@ -30,6 +30,15 @@ py -3 -m pip install -r requirements.txt
 run.bat            # Windows；其它平台： python3 main.py
 ```
 
+> **装不上依赖？**（国内访问 PyPI 慢 / 超时）换清华镜像再试：
+> `py -3 -m pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple`
+>
+> **提示找不到 Python？** 去 <https://www.python.org/downloads/> 下载安装，
+> 安装时勾选 “Add python.exe to PATH”，之后直接双击 `run.bat` 即可。
+>
+> **编码不用管**：中文 Windows 默认 GBK，程序会自动把输出统一切成 UTF-8
+>（`utf8mode.py`），歌词 / 日志 / 中文路径里的任意字符都能正常显示。
+
 启动后它会自动在局域网里找音箱（Sonos 和通用 DLNA 一起问）。找到就开始显示；
 找不到会把提示写在窗口里，也可以手动把音箱地址填进 `config.json`
 （`speaker_host`；DLNA 音箱再填上 `speaker_location`，即设备描述 URL）。
@@ -448,6 +457,7 @@ CI 在 `.github/workflows/ci.yml`：Ubuntu / Windows / macOS × Python 3.11 / 3.
 ```
 LyriCast/
 ├── main.py        入口：发现/连接音箱、轮询、事件订阅、抓歌词、托盘
+├── utf8mode.py    输出流统一切 UTF-8（中文 Windows 的 GBK 兜底）
 ├── speakers/      音箱后端（可扩展，见 docs/BACKENDS.md）
 │   ├── base.py       后端接口：NowPlaying + 能力位（读/控/订阅）
 │   ├── http.py       HTTP / SOAP / XML 公共工具（UA、超时口径统一）
@@ -511,6 +521,9 @@ git clone https://github.com/ChandlerYancug/LyriCast.git && cd LyriCast
 py -3 -m pip install -r requirements.txt
 python main.py            # or run.bat on Windows
 ```
+
+No encoding setup needed on Chinese Windows (output is forced to UTF-8).
+Slow PyPI? add a mirror: `-i https://pypi.tuna.tsinghua.edu.cn/simple`.
 
 Configuration lives in `config.json` (see `config.example.json`); the tray menu can
 pick a discovered speaker, and logs go to `%LOCALAPPDATA%\LyriCast\logs\`

@@ -19,6 +19,12 @@ OUT = os.path.join(BASE, "am_token.txt")
 DOMAIN = "music.apple.com"
 NAME = "media-user-token"
 
+try:                                    # 中文 Windows 默认 GBK:输出流切 UTF-8
+    from utf8mode import ensure_utf8
+    ensure_utf8()
+except Exception:
+    pass
+
 
 def load(fn):
     try:

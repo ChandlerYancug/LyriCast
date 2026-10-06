@@ -19,6 +19,9 @@ import time
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, BASE)
 
+from utf8mode import ensure_utf8  # noqa: E402  （中文 Windows 默认 GBK）
+ensure_utf8()
+
 from PyQt6.QtCore import QBuffer, QIODevice, Qt
 from PyQt6.QtGui import QColor, QFontDatabase, QImage
 from PyQt6.QtWidgets import QApplication

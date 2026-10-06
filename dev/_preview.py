@@ -13,6 +13,9 @@ import time
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # 项目根目录
 sys.path.insert(0, BASE)
 
+from utf8mode import ensure_utf8  # noqa: E402  （中文 Windows 默认 GBK）
+ensure_utf8()
+
 # 注意：苹方等属于“用户字体”，离屏字体库看不到，这里用真实平台渲染，
 # 但从不 show() 窗口，所以不会弹任何东西。
 from PyQt6.QtWidgets import QApplication

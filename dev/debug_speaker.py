@@ -21,6 +21,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 BASE = os.path.dirname(HERE)            # 项目根目录（本脚本在 dev/ 下）
 sys.path.insert(0, BASE)
 
+from utf8mode import ensure_utf8  # noqa: E402  （中文 Windows 默认 GBK）
+ensure_utf8()
+
 import speakers  # noqa: E402
 from speakers import http  # noqa: E402
 
