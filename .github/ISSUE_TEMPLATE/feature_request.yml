@@ -1,0 +1,41 @@
+name: 功能建议 (Feature request)
+description: 提出新功能或改进想法
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: 功能描述
+      description: 你希望 LyriCast 增加或改变什么？
+    validations:
+      required: true
+
+  - type: textarea
+    id: scenario
+    attributes:
+      label: 使用场景
+      description: 这个功能在什么场景下有用？你现在是怎么做的？
+      placeholder: |
+        我的音箱是 ...，我希望 ...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: pr
+    attributes:
+      label: 你愿意为此提 PR 吗？
+      options:
+        - 愿意，我可以尝试实现
+        - 愿意协助测试并提供反馈
+        - 暂时没有时间
+    validations:
+      required: true
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充信息
+      description: 参考链接、截图、其他项目的类似实现等（可选）
+    validations:
+      required: false

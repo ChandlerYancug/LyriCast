@@ -1,0 +1,36 @@
+{
+  "speaker_type": "auto",
+  "speaker_host": "",
+  "speaker_name": "",
+  "speaker_location": "",
+  "font_family": "SF Pro Display",
+  "cjk_font": "Noto Sans SC",
+  "font_size": 26,
+  "opacity": 0.96,
+  "window_width": 900,
+  "window_height": 300,
+  "corner_radius": 18,
+  "window_mode": "normal",
+  "always_on_top": false,
+  "click_through": false,
+  "show_track_info": true,
+  "show_translation": true,
+  "bg_album_art": true,
+  "lyrics_offset_sec": 0.0,
+  "vinyl_turn_seconds": 12.0,
+  "vinyl_material": "auto",
+  "media_keys": true,
+  "volume_keys_speaker": true,
+  "start_view": "player",
+  "player_fullscreen": false,
+  "player_size": [
+    1100,
+    700
+  ],
+  "provider_order": [
+    "apple",
+    "netease",
+    "lrclib"
+  ],
+  "apple_storefront": ""
+}

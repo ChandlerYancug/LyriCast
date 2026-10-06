@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 支持的后端 / HomePod 使用说明
+    url: https://github.com/ChandlerYancug/LyriCast/blob/main/docs/BACKENDS.md
+    about: sonos / upnp / smtc / listen 各后端的差异、HomePod 玩法，提 issue 前先看这里
+  - name: 使用问题请用 Discussions
+    url: https://github.com/ChandlerYancug/LyriCast/discussions
+    about: 安装、配置、音箱连不上等使用问题，请到 Discussions 发帖

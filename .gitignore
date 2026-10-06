@@ -1,0 +1,39 @@
+# ---------------- Python ----------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+build/
+dist/
+*.egg-info/
+
+# ---------------- 个人配置（含音箱 IP / 凭证，绝不进仓库） ----------------
+config.json
+config.local.json
+am_token.txt
+
+# ---------------- 运行产物（歌词 / 封面缓存含版权内容） ----------------
+cache/
+track_debug.txt
+startup_error.log
+
+# ---------------- 字体 ----------------
+# 随包的 OFL 开源字体（Inter / Noto Sans S Chinese）跟仓库走，见 fonts/README.md；
+# SF Pro 是 Apple 版权字体，只能本地自用，绝不进仓库
+fonts/SF-Pro-*
+fonts/SF Pro*
+fonts/*SF-Pro*
+
+# ---------------- 开发杂物 ----------------
+dev/*.png
+dev/*.txt
+dev/applemusic-like-lyrics-main/
+YesPlayMusic-master/
+
+# ---------------- 编辑器 / 系统 ----------------
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

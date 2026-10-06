@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lyricast"
+version = "0.2.0"
+description = "任何局域网音箱的桌面悬浮歌词条与黑胶播放器 (desktop lyrics bar & vinyl player for any LAN speaker)"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.11"
+dependencies = [
+    "PyQt6>=6.5",
+    "requests>=2.28",
+    "pillow>=9.0",
+]
+
+[project.optional-dependencies]
+# 麦克风 + 音频指纹（路线图，见 docs/BACKENDS.md）
+listen = ["sounddevice>=0.4", "shazamio>=0.6"]
+# Windows 系统媒体会话（电脑自己播放时读曲目；HomePod 走电脑 AirPlay 时也能用）
+smtc = [
+    "winrt-runtime>=2.3",
+    "winrt-Windows.Foundation>=2.3",
+    "winrt-Windows.Foundation.Collections>=2.3",
+    "winrt-Windows.Storage.Streams>=2.3",
+    "winrt-Windows.Media.Control>=2.3",
+]
+dev = ["pytest>=7", "ruff>=0.4"]
+
+[project.scripts]
+lyricast = "main:main"
+
+[tool.setuptools]
+py-modules = [
+    "main",
+    "cache",
+    "lyrics",
+    "apple_music",
+    "timing",
+    "relclock",
+    "eventing",
+    "mediakeys",
+    "overlay",
+    "fullscreen",
+    "vinyl",
+]
+packages = ["speakers"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# main.py 在 Qt 依赖检查之后才 import PyQt6（为了给出人话报错），E402 是故意的
+"main.py" = ["E402"]
+# 测试/脚本要先把项目根插进 sys.path 才能 import 项目模块
+"tests/*" = ["E402"]
+"dev/*" = ["E402"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

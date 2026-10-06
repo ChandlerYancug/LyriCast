@@ -1,0 +1,9 @@
+# 核心依赖（音箱后端泛化后的最小安装）。
+# 换电脑时，执行：  py -3 -m pip install -r requirements.txt
+#
+# 可选依赖都在 pyproject.toml 的 extras 里，不需要可以不装：
+#   pip install -e ".[listen]"   # 麦克风 + 音频指纹（路线图，见 docs/BACKENDS.md）
+#   pip install -e ".[dev]"      # pytest / ruff
+PyQt6>=6.5
+requests>=2.28
+pillow>=9.0
