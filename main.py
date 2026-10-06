@@ -65,8 +65,7 @@ if not _qt_ok:
 
 from PyQt6.QtCore import QObject, QRunnable, QThread, QThreadPool, QTimer, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import (QApplication, QInputDialog, QMenu, QMessageBox,
-                             QSystemTrayIcon)
+from PyQt6.QtWidgets import QApplication, QInputDialog, QMenu, QSystemTrayIcon
 
 import lyrics as lyrics_mod
 import relclock
@@ -505,7 +504,6 @@ class ArtTask(QRunnable):
 
 class _Bridge(QObject):
     devices = pyqtSignal(list)
-    token_done = pyqtSignal(str, str)        # (凭证, 多行说明)
 
 
 # --------------------------------------------------------------------------- #
@@ -531,7 +529,6 @@ class LyriCastApp(QObject):
         self._tasks = set()          # 保持 QRunnable 引用，防止信号对象被回收
         self._last_lyrics = None     # 当前歌词结果（开全屏时要用）
         self._apple_hint_shown = False   # “配 Apple 凭证”只提示一次
-        self._token_busy = False         # 正在后台读浏览器 cookie
         self._last_art = None        # 当前封面 bytes
         self._art_key = None         # 当前封面对应的曲目（补抓去重用）
         self._overlay_was_visible = True
@@ -547,7 +544,6 @@ class LyriCastApp(QObject):
 
         self.bridge = _Bridge()
         self.bridge.devices.connect(self._on_devices)
-        self.bridge.token_done.connect(self._on_token_done)
 
         self.overlay.request_relyrics.connect(self.relyrics)
         self.overlay.request_fullscreen.connect(self._open_fullscreen)
@@ -843,76 +839,16 @@ class LyriCastApp(QObject):
             self.overlay.set_status("打开说明失败：%r" % (exc,))
 
     def _show_apple_token_help(self):
-        """托盘菜单：逐词歌词 / 翻译需要配置 Apple Music 凭证。"""
-        box = QMessageBox()
-        box.setWindowTitle("%s · Apple Music 凭证" % speakers.APP_NAME)
-        box.setIcon(QMessageBox.Icon.Information)
-        box.setText(
-            "想要逐词歌词和中文翻译，需要配置一次 Apple Music 凭证。\n\n"
-            "点「自动获取」→ 从浏览器里读出凭证\n"
-            "（浏览器需先登录 music.apple.com）；\n"
-            "读不到时会给出手动复制的步骤。\n\n"
-            "没有凭证也能用，只是没有逐词高亮和翻译（退回普通歌词）。")
-        box.setDetailedText(
-            "手动步骤：\n"
-            "1. 浏览器登录 https://music.apple.com（保持登录）；\n"
-            "2. F12 → Application → Cookies → https://music.apple.com\n"
-            "   → 复制 media-user-token 的值；\n"
-            "3. 存成项目目录下的 am_token.txt（整个文件就这一行）；\n"
-            "4. 重启本程序。\n\n"
-            "凭证有效期几个月，过期后重做一次即可。")
-        auto_btn = box.addButton("自动获取（推荐）",
-                                 QMessageBox.ButtonRole.AcceptRole)
-        box.addButton("关闭", QMessageBox.ButtonRole.RejectRole)
-        box.exec()
-        if box.clickedButton() is auto_btn:
-            self._fetch_apple_token()
+        """托盘菜单：可视化的 Apple Music 凭证窗口（自动获取 / 手动粘贴）。"""
+        from tokengui import TokenDialog
+        dlg = TokenDialog(on_saved=self._on_token_saved, logger=self.log)
+        dlg.exec()
 
-    def _fetch_apple_token(self):
-        """后台线程里从浏览器读凭证（全程在应用内，不弹命令行窗口）。"""
-        if self._token_busy:
-            return
-        self._token_busy = True
-        self.log.info("从浏览器读取 Apple 凭证…")
-        try:
-            self.tray.showMessage(
-                speakers.APP_NAME, "正在从浏览器读取 Apple Music 凭证…",
-                QSystemTrayIcon.MessageIcon.Information, 4000)
-        except Exception:
-            pass
-
-        def work():
-            try:
-                import apple_music
-                token, logs = apple_music.find_browser_token()
-            except Exception as exc:      # 导入/解密失败都归到“没拿到”
-                token, logs = "", ["读取失败：%r" % (exc,)]
-            try:
-                self.bridge.token_done.emit(token, "\n".join(logs))
-            except RuntimeError:          # 退出时信号对象已销毁
-                pass
-
-        threading.Thread(target=work, daemon=True).start()
-
-    def _on_token_done(self, token, logs):
-        """后台取凭证结束：成功就保存并重抓歌词，失败给手动步骤。"""
-        self._token_busy = False
-        import apple_music
-        if token and apple_music.save_user_token(token):
-            self._apple_hint_shown = True
-            self.log.info("Apple 凭证已更新（%d 字符）", len(token))
-            QMessageBox.information(
-                None, "Apple Music 凭证",
-                "已找到并保存凭证。\n\n%s\n\n马上重新抓歌词…" % logs)
-            self.relyrics()
-        else:
-            self.log.warning("取 Apple 凭证失败：%s",
-                             (logs or "").replace("\n", " | "))
-            QMessageBox.warning(
-                None, "Apple Music 凭证",
-                "没拿到凭证。\n\n%s\n\n"
-                "可以按「详细说明」里的步骤在浏览器里手动复制\n"
-                "media-user-token，在「手动粘贴」里保存。" % (logs or "",))
+    def _on_token_saved(self):
+        """凭证保存后：关掉“该配凭证了”的提示，并重抓当前歌词。"""
+        self._apple_hint_shown = True
+        self.log.info("Apple 凭证已保存，重新抓歌词")
+        self.relyrics()
 
     def _open_log_file(self):
         """托盘菜单：直接打开最新日志（Windows 用记事本；别处用默认程序）。"""

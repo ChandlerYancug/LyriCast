@@ -4,6 +4,14 @@
 [Releases](https://github.com/ChandlerYancug/LyriCast/releases) 页与此同步。
 两个通道：正式版（数字版本号）与 **调试版**（tag 带 `debug`，发布为 pre-release，不覆盖正式版）。
 
+## v0.3.2-debug（2026-10-07 · 调试版 / pre-release）
+
+- **Apple Music 凭证改成完整的图形界面**（托盘菜单 →「Apple Music 凭证」）：
+  窗口里直接显示当前状态；「从浏览器自动获取」带进度与结果；
+  读不到时可以把 `media-user-token` **粘进输入框保存** —— 全程不用命令行。
+  命令行脚本 `get_apple_token.py` 仍保留给源码用户。
+- 后续功能改动都会先发在这个调试通道，验证好了再进正式版。
+
 ## v0.3.1（2026-10-07）
 
 打包与分发：**Windows 免安装版（exe）**。

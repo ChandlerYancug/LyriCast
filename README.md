@@ -380,9 +380,10 @@ Apple 的歌词是官方 TTML 数据：**逐词**带精确起止时间（白色�
 自己账号的凭证（`am_token.txt`）：
 
 1. **浏览器里登录** <https://music.apple.com>（保持登录状态）；
-2. **双击 `get_apple_token.bat`**（最省事；或者托盘菜单 →「Apple Music 凭证（逐词/翻译）…」
-   →「自动获取」）。脚本会从 Chrome / Edge / Firefox 里读出 `media-user-token`
-   并写入 `am_token.txt`；
+2. **双击 `get_apple_token.bat`**（最省事；或者托盘菜单 →「Apple Music 凭证（逐词/翻译）…」）。
+   也可以直接打开托盘菜单的那扇窗口：**「从浏览器自动获取」一键读取，带进度和结果；
+   读不到时把 `media-user-token` 粘进输入框点保存即可** —— 全程不用命令行。
+   脚本会从 Chrome / Edge / Firefox 里读出 `media-user-token` 并写入 `am_token.txt`；
 3. **重启 LyriCast**。
 
 读不到浏览器 cookie 时（新版浏览器会加密），手动来：F12 → Application →
@@ -477,7 +478,7 @@ Sonos 多房间或立体声配对时，**从机（slave）的接口不报告曲�
 - **逐词同步取决于 Apple 源**：主流流行歌大多有逐词数据（syllable-lyrics），
   没有的歌会自动回退到逐行同步，依然流畅；
 - Apple 源的凭证（`am_token.txt`）几个月会过期一次；过期后歌词会自动回退到
-  其它源，重新双击 `get_apple_token.bat`（或托盘菜单里「自动获取」）恢复。
+  其它源，重新双击 `get_apple_token.bat`（或托盘菜单里「Apple Music 凭证」里重新获取）恢复。
 - 如果歌词整体偏早/偏晚，用右键菜单的「延后 / 提前」微调，一劳永逸。
 - 网络电台、广告时段拿不到干净的曲名歌手，匹配不到是正常的。
 - 歌词有版权，**自己用没问题，别公开分发**。
