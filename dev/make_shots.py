@@ -40,6 +40,10 @@ for n in sorted(os.listdir(os.path.join(BASE, "fonts"))):
         QFontDatabase.addApplicationFont(os.path.join(BASE, "fonts", n))
 with open(os.path.join(BASE, "config.json"), "r", encoding="utf-8") as f:
     cfg = json.load(f)
+# README 的预览用固定的、上镜的一套（不跟着用户自己的 config 变）
+cfg = dict(cfg)
+cfg["vinyl_material"] = "black"
+cfg["tonearm_skin"] = "mirror"
 
 
 def real_lyrics():

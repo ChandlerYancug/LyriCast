@@ -101,8 +101,9 @@ DEFAULTS = {
     "bg_album_art": True,
     "lyrics_offset_sec": 0.0,
     "vinyl_turn_seconds": 12.0,
-    "vinyl_material": "auto",      # auto = 按歌随机彩胶；也可固定某款（见 vinyl.py）
-    "tonearm_skin": "auto",       # 唱臂皮肤：auto = 按歌随机；也可固定某支（见 tonearm.py）
+    "vinyl_material": "auto",      # 用户上次挑的彩胶（auto=默认经典黑胶；见 vinyl.py）
+    "tonearm_skin": "auto",       # 用户上次挑的唱臂（auto=默认碳纤维；见 tonearm.py）
+    "song_skins": {},              # 每首歌的皮肤记忆（见 skins.py，自动维护）
     "media_keys": True,
     "volume_keys_speaker": True,     # 键盘音量键接管来调音箱（否则调系统音量）
     "start_view": "player",          # player = 开黑胶播放器；bar = 只开悬浮歌词条
@@ -590,11 +591,6 @@ class LyriCastApp(QObject):
         menu.addAction("黑胶转速 快一点", lambda: self._nudge_vinyl(-3.0))
         menu.addAction("换一张彩胶", self._cycle_vinyl)
         menu.addAction("换一支唱臂", self._cycle_tonearm)
-        auto_arm = menu.addAction("唱臂：跟随每首歌（自动换）")
-        auto_arm.setCheckable(True)
-        auto_arm.setChecked(
-            str(self.cfg.get("tonearm_skin", "auto")).lower() == "auto")
-        auto_arm.triggered.connect(self._set_tonearm_auto)
         menu.addSeparator()
         mk = menu.addAction("多媒体键控制音箱（全局）")
         mk.setCheckable(True)
@@ -1143,23 +1139,17 @@ class LyriCastApp(QObject):
         save_config(self.cfg)
 
     def _cycle_vinyl(self):
-        """换一张彩胶：让播放器换到下一款材质（只影响本次显示）。"""
+        """换一张彩胶：写进配置 + 记住这首歌（下次放这首还是它）。"""
         if not self.fullscreen.isVisible():
             self._show_player()
         self.fullscreen.cycle_material()
+        save_config(self.cfg)
 
     def _cycle_tonearm(self):
-        """换一支唱臂：写进配置固定下来（重启后也保持）。"""
+        """换一支唱臂：写进配置 + 记住这首歌（下次放这首还是它）。"""
         if not self.fullscreen.isVisible():
             self._show_player()
         self.fullscreen.cycle_tonearm()
-        save_config(self.cfg)
-
-    def _set_tonearm_auto(self):
-        """唱臂恢复 auto：跟随每首歌自动换。"""
-        if not self.fullscreen.isVisible():
-            self._show_player()
-        self.fullscreen.set_tonearm_auto()
         save_config(self.cfg)
 
     # ---- 全局多媒体键（仅 Windows） ------------------------------------- #

@@ -138,9 +138,8 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 - **唱片投影**：抄 [YesPlayMusic](https://github.com/qier222/YesPlayMusic) 歌词页的
   `.shadow` 做法（封面自身模糊一份、下移、略缩小、压暗当投影），唱片像浮在桌面上；
   模糊图只算一次，换封面才重算
-- **彩胶材质（16 种，按歌随机）**：唱片不是永远黑胶 —— 按「歌名 + 歌手」做种子随机
-  挑一款，同一首歌固定同一款（像“这张单曲压的是红胶”），换歌就换。每种材质除了
-  底色，**透明感 / 花纹 / 沟槽表现 / 光泽**都不一样，不是只换颜色：
+- **彩胶材质（16 种）**：唱片不是永远黑胶 —— 每种材质除了底色，**透明感 / 花纹 /
+  沟槽表现 / 光泽**都不一样，不是只换颜色（切换同唱臂：托盘菜单 / `M` 键）：
 
   | id | 材质 | 质感 |
   | --- | --- | --- |
@@ -160,23 +159,22 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
   | `smoke` | 烟熏胶 | 半透灰底 + 烟雾状色块 |
 
   想固定一款就用 `config.json` 里的 `vinyl_material`（填上面的 id，`"auto"` 为随机）。
-- **唱臂皮肤（8 支，致敬真实经典）**：和彩胶同一套玩法 —— 按歌随机换（`auto`），
-  也能固定一支（`config.json` 的 `tonearm_skin`；托盘菜单「换一支唱臂」会固定下来，
-  播放器里按 `N` 换下一支）：
+- **唱臂皮肤（6 支，好看优先）**：锥形管身（枢轴粗、唱头端细）+ 金属质感 +
+  抛光唱头架 + 钻石针尖光晕；托盘菜单「换一支唱臂」或播放器里按 `N` 轮换：
 
-  | id | 唱臂 | 造型 |
+  | id | 名字 | 观感 |
   | --- | --- | --- |
-  | `sme3009` | SME 3009 · 铬 | S 形铬管 + 开孔铝唱头架 + 青铜轴承座（60 年代英国经典） |
-  | `sme-v` | SME V · 黑镁 | 直臂黑镁管，唱头直装、无独立架子 |
-  | `rega` | Rega RB · 哑黑 | 一体成型哑光黑直臂，极简英式 |
-  | `sl1200` | SL-1200 · DJ | Technics 银 S 臂 + 黑架子 + 白唱头（Shure 风） |
-  | `at95` | AT95E · 绿头 | 银色直臂 + 经典绿唱头（Audio-Technica 的味道） |
-  | `2m-blue` | 2M Blue · 蓝头 | 枪灰直管 + 蓝色唱头（Ortofon） |
-  | `concorde` | Concorde · DJ | 锥形一体蓝唱头 + 银环（Ortofon DJ 经典） |
-  | `ekos` | Ekos · 钛灰 | 黑管 + 烟熏唱头架 + 铬环配重（Linn 气质） |
+  | `carbon` | 碳纤维 | 近黑碳管 + 冷色高光 + 银唱头架（宝碟风），默认 |
+  | `champagne` | 香槟金 | 暖金管身 + 奶油色唱头架 |
+  | `mirror` | 镜面铬 · S 形 | S 形镜面铬管，反光一路拉通，复古优雅 |
+  | `midnight` | 午夜蓝 | 深蓝金属管 + 蓝唱头 |
+  | `ivory` | 象牙白 · 玫瑰金 | 奶白管身 + 玫瑰金配件 |
+  | `walnut` | 胡桃木 · 黄铜 | 漆面木纹管 + 黄铜配件 |
 
-  管身用「暗边 + 亮面 + 居中高光」三层描边画，弯管上也有圆柱感；想加自己的
-  配色照 `tonearm.py` 的模板加一条即可。
+  想加自己的配色，照 `tonearm.py` 的模板加一条即可。
+- **皮肤会“记住”你的选择**：切歌**不会**自动乱换 —— 没记过的歌用你上一次挑的
+  那款；你在某首歌里换过（`M` / `N` / 托盘菜单），这首歌就被记住，下次再放
+  这首歌自动恢复你当时的选择（存在 `config.json` 的 `song_skins`，最多 500 首）。
 - **翻译“四周汇聚”入场（只在当前行）**：每个字从各自方向（确定性伪随机，稳定不跳）
   的偏移处**由虚到实**浮入到最终位置，并带几层幽灵描边做方向柔化 —— 行内时间驱动，
   暂停时自然冻结；翻译字号 0.60×、Bold 字重、亮度 0.65（后两项对齐 YesPlayMusic 的
@@ -338,8 +336,9 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 | `bg_album_art` | 是否用专辑封面做模糊背景 |
 | `lyrics_offset_sec` | 全局歌词偏移（秒），正数=歌词延后 |
 | `vinyl_turn_seconds` | 唱片转一圈的秒数（默认 12） |
-| `vinyl_material` | 唱片材质：`"auto"`＝按歌随机彩胶；也可固定填 `black` / `white` / `clear` / `galaxy` / `splatter` …（见上面彩胶表） |
-| `tonearm_skin` | 唱臂皮肤：`"auto"`＝按歌随机；也可固定填 `sme3009` / `sl1200` / `2m-blue` …（见上面唱臂表） |
+| `vinyl_material` | 当前彩胶材质（`auto` / 未填＝默认 `black` 经典黑胶；可填上面彩胶表的 id） |
+| `tonearm_skin` | 当前唱臂皮肤（`auto` / 未填＝默认 `carbon` 碳纤维；可填上面唱臂表的 id） |
+| `song_skins` | 每首歌记住的皮肤（自动维护，不用手改；最多 500 首） |
 | `start_view` | `player`＝启动开黑胶播放器（默认）；`bar`＝只开悬浮歌词条 |
 | `player_fullscreen` | 播放器是否以全屏启动（默认 `false`＝窗口） |
 | `player_size` / `player_pos` | 播放器窗口尺寸与位置，自动记录 |
@@ -486,6 +485,8 @@ Sonos 多房间或立体声配对时，**从机（slave）的接口不报告曲�
 ## 开源与隐私
 
 - 许可证 **MIT**（见 `LICENSE`）；第三方参考项目的源码**未随仓库分发**，仅作设计参考。
+- 版本历史见 [CHANGELOG.md](CHANGELOG.md)；每次发布都会在
+  [Releases](https://github.com/ChandlerYancug/LyriCast/releases) 页写清楚改了什么。
 - **不进仓库**的东西（见 `.gitignore`）：`config.json`（含你家音箱 IP）、
   `am_token.txt`（Apple 凭证）、`cache/`（歌词/封面缓存）、`fonts/` 里的
   SF Pro（版权字体）、`dev/` 的输出文件。
@@ -538,7 +539,8 @@ LyriCast/
 ├── cache.py       歌词 / 封面磁盘缓存
 ├── overlay.py     悬浮歌词窗（自绘 + 60fps 动画）
 ├── fullscreen.py  全屏歌词模式（旋转黑胶 + 模糊封面背景）
-├── tonearm.py     唱臂皮肤（ 8 支致敬经典的造型，见「唱臂皮肤」表）
+├── tonearm.py     唱臂皮肤（6 支，见「唱臂皮肤」表）
+├── skins.py       每首歌的皮肤记忆（彩胶 / 唱臂，存 config.json）
 ├── config.example.json  配置模板（真配置 config.json 不进仓库）
 ├── am_token.txt   Apple Music 凭证（自己可见，别外传；不进仓库）
 ├── get_apple_token.py   一键刷新 Apple 凭证（写 am_token.txt）
@@ -550,6 +552,7 @@ LyriCast/
 ├── docs/images/   README 用的截图与演示动图（dev/make_shots.py 生成）
 ├── .github/       CI（3 OS × 2 Python）与 issue / PR 模板
 ├── pyproject.toml / requirements.txt
+├── CHANGELOG.md   版本历史（每次发布都写清楚改了什么）
 ├── run.bat        启动（Windows；首次自动建 .venv 并装依赖，不污染系统 Python；默认无控制台）
 ├── run-console.bat  同 run.bat，但保留控制台窗口（看实时日志用）
 ├── .venv/         依赖虚拟环境（run.bat 自动生成，不进仓库）

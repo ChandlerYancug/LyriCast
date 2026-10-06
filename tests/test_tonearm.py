@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""唱臂皮肤表：键齐全、选择稳定（同一首歌跨进程固定）、轮换能走遍全部。
+"""唱臂皮肤表：键齐全、全局选择正确（config 优先，未知值回退默认）、轮换走遍全部。
 
 跑法（项目根目录）：
     python tests/test_tonearm.py
@@ -14,12 +14,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import tonearm  # noqa: E402
 
 _REQUIRED = ("id", "name", "desc", "shape", "tube_edge", "tube_body",
-             "tube_hi", "shell", "shell_col", "cart", "accent", "cw",
-             "pivot")
+             "tube_gloss", "tube_spec", "shell_col", "cart", "accent",
+             "cw_col", "pivot_col")
 
 
 def test_skins_have_required_keys():
-    assert len(tonearm.SKINS) >= 6
+    assert len(tonearm.SKINS) >= 5
     ids = set()
     for s in tonearm.SKINS:
         for key in _REQUIRED:
@@ -27,22 +27,21 @@ def test_skins_have_required_keys():
         assert s["shape"] in ("s", "j", "straight"), s["shape"]
         assert s["id"] not in ids, "皮肤 id 重复：%s" % s["id"]
         ids.add(s["id"])
+    assert tonearm.DEFAULT_ID in ids
 
 
-def test_pick_is_deterministic_and_config_wins():
-    a = tonearm.pick({}, "song|artist")
-    b = tonearm.pick({"tonearm_skin": "auto"}, "song|artist")
-    assert a["id"] == b["id"]                 # 同一首歌固定一支
+def test_pick_prefers_config_then_default():
+    assert tonearm.pick({})["id"] == tonearm.DEFAULT_ID
     want = tonearm.SKINS[-1]["id"]
-    assert tonearm.pick({"tonearm_skin": want}, "song")["id"] == want
-    # 未知值当作 auto 处理（同一 key 结果一致）
-    assert tonearm.pick({"tonearm_skin": "no-such"},
-                        "song|artist")["id"] == a["id"]
+    assert tonearm.pick({"tonearm_skin": want})["id"] == want
+    # 未知值回退默认（不再按歌随机换）
+    assert tonearm.pick({"tonearm_skin": "no-such"})["id"] == tonearm.DEFAULT_ID
 
 
-def test_pick_varies_across_songs():
-    ids = {tonearm.pick({}, "song-%d|artist" % i)["id"] for i in range(12)}
-    assert len(ids) >= 3                      # 12 首歌至少落到 3 支不同的臂
+def test_by_id_lookup():
+    assert tonearm.by_id(tonearm.DEFAULT_ID)["name"]
+    assert tonearm.by_id("nope") is None
+    assert tonearm.by_id(None) is None
 
 
 def test_next_of_cycles_everything():
@@ -56,8 +55,8 @@ def test_next_of_cycles_everything():
 
 TESTS = (
     test_skins_have_required_keys,
-    test_pick_is_deterministic_and_config_wins,
-    test_pick_varies_across_songs,
+    test_pick_prefers_config_then_default,
+    test_by_id_lookup,
     test_next_of_cycles_everything,
 )
 

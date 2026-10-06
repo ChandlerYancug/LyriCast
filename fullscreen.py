@@ -14,6 +14,7 @@ import time
 from bisect import bisect_right
 from collections import OrderedDict
 
+import skins
 import timing
 import tonearm
 import vinyl
@@ -365,8 +366,8 @@ class FullscreenView(QWidget):
         self._plate_prev = None     # 上一张盘面 / 封面（切歌时交叉过渡用）
         self._art_prev = None
         self._vinyl_fade_ts = 0.0
-        self._vinyl_mat = vinyl.pick(cfg, "")   # 唱片材质（彩胶）：默认随机一款
-        self._arm_skin = tonearm.pick(cfg, "")  # 唱臂皮肤：默认同样按歌随机
+        self._vinyl_mat = vinyl.pick(cfg)        # 彩胶：全局选择（默认经典黑胶）
+        self._arm_skin = tonearm.pick(cfg)       # 唱臂：全局选择（默认碳纤维）
         self._shadow_pm = None      # 封面色彩的柔影（YesPlayMusic 的 .shadow 做法）
         self._shadow_key = None
         self._arm_off = 0.0         # 唱臂抬起角（暂停时向外摆）
@@ -463,30 +464,28 @@ class FullscreenView(QWidget):
     # 数据入口
     # ------------------------------------------------------------------ #
     def cycle_material(self):
-        """换一种彩胶材质（`M` 键 / 托盘菜单）。"""
+        """换一种彩胶：写进配置（全局）+ 记住这首歌（`M` 键 / 托盘菜单）。"""
         self._vinyl_swap()
         self._vinyl_mat = vinyl.next_of(self._vinyl_mat)
         self._plate_key = None
+        self.cfg["vinyl_material"] = self._vinyl_mat["id"]
+        skins.remember(self.cfg, self._skin_key(),
+                       vinyl=self._vinyl_mat["id"])
         self._toast_text = "唱片材质：%s" % self._vinyl_mat["name"]
         self._toast_until = time.monotonic() + 1.4
         self.update()
 
     def cycle_tonearm(self):
-        """换一支唱臂（托盘菜单）；写进配置，固定下来。"""
+        """换一支唱臂：写进配置（全局）+ 记住这首歌（`N` 键 / 托盘菜单）。"""
         self._arm_skin = tonearm.next_of(self._arm_skin)
         self.cfg["tonearm_skin"] = self._arm_skin["id"]
+        skins.remember(self.cfg, self._skin_key(), arm=self._arm_skin["id"])
         self._toast_text = "唱臂：%s" % self._arm_skin["name"]
         self._toast_until = time.monotonic() + 1.4
         self.update()
 
-    def set_tonearm_auto(self):
-        """恢复“跟随每首歌自动换唱臂”。"""
-        self.cfg["tonearm_skin"] = "auto"
-        key = "%s|%s" % (self.title, self.artist)
-        self._arm_skin = tonearm.pick(self.cfg, key)
-        self._toast_text = "唱臂：跟随每首歌（%s）" % self._arm_skin["name"]
-        self._toast_until = time.monotonic() + 1.6
-        self.update()
+    def _skin_key(self):
+        return skins.track_key(self.title, self.artist)
 
     def _vinyl_swap(self):
         """把当前盘面 / 封面存成“上一张”，用于切歌时的交叉过渡（唱臂也会抬一下）。"""
@@ -510,13 +509,14 @@ class FullscreenView(QWidget):
         self._vinyl_swap()
         self.title = info.get("title", "") or ""
         self.artist = info.get("artist", "") or ""
-        # 唱片材质：按「歌名 + 歌手」定种子 —— 每首歌固定一款彩胶
-        mat = vinyl.pick(self.cfg, "%s|%s" % (self.title, self.artist))
+        # 皮肤：先用这首歌记住的选择（用户当时挑的）；没记过就用全局选择 ——
+        # 切歌不会自动乱换，一直保持用户上一次的选择
+        memo = skins.recall(self.cfg, self._skin_key())
+        mat = vinyl.by_id(memo.get("vinyl")) or vinyl.pick(self.cfg)
         if mat["id"] != self._vinyl_mat["id"]:
             self._vinyl_mat = mat
             self._plate_key = None              # 换材质 → 盘体重画
-        # 唱臂皮肤：auto 时同样按歌定种子（一支臂配一张唱片）
-        self._arm_skin = tonearm.pick(self.cfg, "%s|%s" % (self.title, self.artist))
+        self._arm_skin = tonearm.by_id(memo.get("arm")) or tonearm.pick(self.cfg)
         self.duration = float(info.get("duration") or 0.0)
         self.status_text = ""           # 搜索期间留白，不再闪“正在搜索歌词…”
         self._lines, self._times, self._plain = [], [], []
@@ -1534,9 +1534,10 @@ class FullscreenView(QWidget):
         """
         hx, hy = VINYL_ARM_HIT
         ax, ay = VINYL_ARM_PIVOT
-        # 枢轴不能伸进歌词区（小窗口下自动往回收）
+        # 枢轴不能伸进歌词区（小窗口下自动往回收）；
+        # 也不能太靠上 —— 否则配重会被屏幕顶边裁掉
         px = min(cx + R * ax, self.width() * TEXT_X - R * 0.12)
-        py = cy + R * ay
+        py = max(cy + R * ay, R * 0.17)
         dx, dy = cx + R * hx - px, cy + R * hy - py
         L = math.hypot(dx, dy)
         ang = math.degrees(math.atan2(dy, dx))

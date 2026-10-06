@@ -129,14 +129,17 @@ MATERIALS = [
 BY_ID = {m["id"]: m for m in MATERIALS}
 
 
-def pick(cfg, key):
-    """挑一款材质：config 指定优先，否则按 key 哈希定（同一首歌固定一款）。"""
-    want = str((cfg or {}).get("vinyl_material", "auto") or "auto")
-    if want in BY_ID:
-        return BY_ID[want]
-    if not key:
-        return MATERIALS[0]
-    return MATERIALS[random.Random("vinyl|" + key).randrange(len(MATERIALS))]
+def by_id(mat_id):
+    """按 id 取材质；没有就返回 None。"""
+    return BY_ID.get(str(mat_id or ""))
+
+
+def pick(cfg):
+    """全局选择：config 里固定过的就用它，否则默认「经典黑胶」。
+
+    不再按歌随机 —— 用户的选译会一直保持（每首歌的专属选择见 skins.py）。
+    """
+    return by_id((cfg or {}).get("vinyl_material")) or BY_ID[MATERIALS[0]["id"]]
 
 
 def has_pattern(mat):
