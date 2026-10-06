@@ -62,7 +62,8 @@ if not _qt_ok:
 
 from PyQt6.QtCore import QObject, QRunnable, QThread, QThreadPool, QTimer, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
+from PyQt6.QtWidgets import (QApplication, QInputDialog, QMenu, QMessageBox,
+                             QSystemTrayIcon)
 
 import lyrics as lyrics_mod
 import relclock
@@ -581,6 +582,7 @@ class LyriCastApp(QObject):
         menu.addMenu(self.speaker_menu)
         menu.addAction("搜索音箱设备…", self._search_devices)
         menu.addAction("重新发现（忽略已保存设备）", self._rediscover)
+        menu.addAction("手动输入音箱 IP…", self._enter_speaker_ip)
         menu.addAction("HomePod / AirPlay 搜不到？", self._open_homepod_docs)
         menu.addSeparator()
         menu.addAction("黑胶转速 慢一点", lambda: self._nudge_vinyl(+3.0))
@@ -708,6 +710,10 @@ class LyriCastApp(QObject):
             self.log.info("SSDP 发现 %d 台设备：%s", len(devices),
                           ", ".join("%s[%s]" % (d.get("name") or d.get("ip"),
                                               d.get("kind")) for d in devices))
+            if not devices:
+                self.log.warning(
+                    "SSDP 没发现任何设备（本机防火墙 / VPN、Clash 等 TUN 代理、"
+                    "路由器 AP 隔离都会导致）；可托盘菜单「手动输入音箱 IP…」直连")
         except Exception as exc:
             self.log.warning("设备发现失败：%r", exc)
             devices = []
@@ -774,6 +780,30 @@ class LyriCastApp(QObject):
         self.log.info("选定后端：本机媒体会话（SMTC）")
         self.reconnect()
 
+    def _enter_speaker_ip(self):
+        """托盘菜单：SSDP 被防火墙 / VPN 拦住时，直接输入音箱 IP 连接。
+
+        完全绕过搜索：Sonos 走 1400 端口；DLNA 会自动在常见端口/路径
+        里猜设备描述地址（见 discovery.find_description）。
+        """
+        text, ok = QInputDialog.getText(
+            None, "%s · 手动连接音箱" % speakers.APP_NAME,
+            "输入音箱的 IP 地址（如 192.168.1.20）：\n"
+            "· Sonos：App 里「设置 → 系统 → 关于我的系统」\n"
+            "· 其它音箱：路由器管理页的设备列表里看")
+        if not ok:
+            return
+        host = (text or "").strip()
+        if not host:
+            return
+        self.cfg["speaker_host"] = host
+        self.cfg["speaker_type"] = "auto"
+        self.cfg["speaker_location"] = ""
+        self.cfg["speaker_name"] = ""
+        save_config(self.cfg)
+        self.log.info("手动指定音箱 IP：%s", host)
+        self.reconnect()
+
     def _open_logs(self):
         """托盘菜单：打开日志文件夹（提 issue 时要发的东西在这里）。"""
         path = speakers.log_dir()
@@ -835,10 +865,10 @@ class LyriCastApp(QObject):
             return
         if not devices:
             self.overlay.set_status(
-                "未发现音箱设备\n"
-                "· HomePod / 纯 AirPlay 音箱没有可读接口，搜不到是正常的\n"
-                "  （点托盘菜单「HomePod / AirPlay 搜不到？」有办法）\n"
-                "· 其它音箱：确认已开机、与本机同一 Wi-Fi；或手动填 config.json"
+                "未发现音箱设备（同一 Wi-Fi 也搜不到？多半是本机被拦了）：\n"
+                "· Windows 防火墙弹窗要点「允许」；VPN / Clash 的 TUN 模式先关\n"
+                "· 托盘菜单 →「手动输入音箱 IP…」可以完全绕过搜索直接连\n"
+                "· HomePod / 纯 AirPlay 搜不到是正常的（托盘里有说明）"
             )
             self._schedule_retry(15000)
             return

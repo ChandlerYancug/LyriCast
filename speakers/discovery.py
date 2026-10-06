@@ -47,44 +47,50 @@ def _m_search_msg(st):
 
 
 def _ssdp_probe(timeout):
-    """一次 M-SEARCH，收集 {ip: {st:..., location:...}}（同 IP 多设备再细分）。"""
+    """M-SEARCH 探测 -> [{ip, location, st:{...}}, ...]。
+
+    UDP 会丢包（Wi-Fi 上尤其明显），同一个请求按间隔重发几轮；
+    设备端按 MX 随机延迟回复，收包窗口覆盖整个 timeout。
+    """
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, 2)
     except OSError:
         pass
-    sock.settimeout(0.5)
-
-    try:
-        for st in M_SEARCH_STS:
-            try:
-                sock.sendto(_m_search_msg(st).encode("utf-8"), SSDP_ADDR)
-            except OSError:
-                pass
-    except OSError:
-        sock.close()
-        return []
+    sock.settimeout(0.4)
 
     found = {}          # (ip, location) -> {"st": set(), ...}
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            data, addr = sock.recvfrom(65535)
-        except socket.timeout:
-            continue
-        except OSError:
-            break
-        head = data.decode("utf-8", "ignore")
-        loc = _header(head, "LOCATION")
-        if not loc:
-            continue
-        key = (addr[0], loc)
-        item = found.setdefault(key, {"ip": addr[0], "location": loc, "st": set()})
-        st = _header(head, "ST")
-        if st:
-            item["st"].add(st)
-    sock.close()
+    try:
+        deadline = time.time() + timeout
+        next_send = 0.0
+        interval = max(0.6, timeout / 3.0)      # 重发间隔
+        while time.time() < deadline:
+            if time.time() >= next_send:
+                for st in M_SEARCH_STS:
+                    try:
+                        sock.sendto(_m_search_msg(st).encode("utf-8"), SSDP_ADDR)
+                    except OSError:
+                        pass
+                next_send = time.time() + interval
+            try:
+                data, addr = sock.recvfrom(65535)
+            except socket.timeout:
+                continue
+            except OSError:
+                break
+            head = data.decode("utf-8", "ignore")
+            loc = _header(head, "LOCATION")
+            if not loc:
+                continue
+            key = (addr[0], loc)
+            item = found.setdefault(key, {"ip": addr[0], "location": loc,
+                                          "st": set()})
+            st = _header(head, "ST")
+            if st:
+                item["st"].add(st)
+    finally:
+        sock.close()
     return list(found.values())
 
 

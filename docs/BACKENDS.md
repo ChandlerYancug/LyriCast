@@ -102,6 +102,24 @@ Windows 用 SMTC（本项目的 `smtc` 后端）、macOS 用 MediaRemote（计�
 
 设备能用 SSDP 发现的话，再给 `discovery.py` 的 `M_SEARCH_STS` 加一条 ST（可选）。
 
+## 搜不到设备（SSDP）怎么办
+
+`discover()` 向 `239.255.255.250:1900` 发 M-SEARCH（两个 ST，且在一个窗口内
+重发多轮——UDP 会丢包，Wi-Fi 上尤其明显）。一台都搜不到时，通常是**回包被
+本机拦了**，而不是音箱的问题：
+
+- **Windows 防火墙**：首次运行的「允许 Python 访问网络」漏点/点错。去「允许
+  应用通过防火墙」里给 Python / pythonw 勾上专用 + 公用；
+- **VPN / 代理的 TUN 模式**（Clash、WireGuard 等）：会把组播流量也接管掉，退出它
+  或把局域网网段加进直连规则；
+- **路由器 AP 隔离 / 访客网络 / 网段不同**：电脑和设备要能互相 ping 通；
+- **兜底：手动给 IP**。托盘菜单 →「手动输入音箱 IP…」（或直接在 `config.json` 填
+  `speaker_host`）。Sonos 只需要 IP（走 1400 端口）；DLNA 设备在
+  `speaker_location` 留空时会自动在常见端口/路径里猜设备描述
+  （`discovery.find_description()`）。
+
+验证：`dev/debug_speaker.py` 开头就会打出发现结果，能直接看出 SSDP 通不通。
+
 ## 已知限制
 
 - **元数据各家不齐**：有的没有封面 URL，有的没有专辑名，有的把「歌手 - 歌名」塞进一个字段（`split_title_artist()` 兜底拆）；
