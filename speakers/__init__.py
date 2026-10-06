@@ -51,6 +51,22 @@ _BACKENDS = {
     # "listen": ("speakers.listen", "ListenBackend"),  # 麦克风 + 指纹
 }
 
+# 下面几行只是“静态标记”：真正的加载仍是上面注册表的懒加载，
+# 但打包成 exe（PyInstaller 等）时静态分析看不到字符串里的模块名，
+# 需要这样带一下；某个后端缺依赖（如 smtc 要 winrt）不影响其它后端。
+try:                                    # noqa: SIM105
+    from . import sonos                 # noqa: F401
+except Exception:
+    pass
+try:                                    # noqa: SIM105
+    from . import upnp                  # noqa: F401
+except Exception:
+    pass
+try:                                    # noqa: SIM105
+    from . import smtc                  # noqa: F401
+except Exception:
+    pass
+
 
 def backend_kinds():
     """已安装可用的后端 kind 列表。"""

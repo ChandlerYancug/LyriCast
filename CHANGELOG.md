@@ -2,6 +2,22 @@
 
 写法：每个发布版本一段，点明"用户能感知的改动"。GitHub 的
 [Releases](https://github.com/ChandlerYancug/LyriCast/releases) 页与此同步。
+两个通道：正式版（数字版本号）与 **调试版**（tag 带 `debug`，发布为 pre-release，不覆盖正式版）。
+
+## v0.3.1（2026-10-07）
+
+打包与分发：**Windows 免安装版（exe）**。
+
+- 新增 PyInstaller 打包脚本 `dev/build_exe.py`，产物 `dist/LyriCast/`（绿色版，双击即用）
+- 新增 GitHub Actions 发布流水线（`.github/workflows/release.yml`）：打 `v*` tag
+  自动构建 exe 并挂到对应 Release；tag 里带 `debug` 的发布为 pre-release（调试版）
+- exe 模式下可写数据（`config.json` / `am_token.txt` / `cache/`）放到
+  `%LOCALAPPDATA%\LyriCast\`（和日志同一处），exe 放哪都能正常保存；
+  源码运行仍是项目目录，老用户无感
+- 「自动获取 Apple 凭证」改为**应用内直接读浏览器 cookie**（不再启动外部命令，
+  exe 里也能用）；命令行脚本 `get_apple_token.py` 保留给源码用户
+- exe 里同样随包字体 / 图标 / 开机自启（快捷方式指向 exe 自己）
+- 修复打包后“找不到音箱后端”的问题（后端是动态加载的，需要在包内静态标记）
 
 ## v0.3.0（2026-10-07）
 

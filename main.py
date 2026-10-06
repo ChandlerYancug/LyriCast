@@ -16,8 +16,11 @@ import sys
 import threading
 import time
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_PATH = os.path.join(BASE_DIR, "config.json")
+from speakers import paths as app_paths   # 只读资源 / 可写数据目录（exe 模式不同）
+
+RES_DIR = app_paths.bundle_dir()          # fonts/、icon.ico 等只读资源
+DATA_DIR = app_paths.data_dir()           # config.json / am_token.txt / cache/
+CONFIG_PATH = app_paths.config_path()
 
 try:                                  # 中文 Windows 默认 GBK:输出流切 UTF-8
     from utf8mode import ensure_utf8
@@ -53,7 +56,7 @@ if not _qt_ok:
     except Exception:
         pass
     try:
-        with io.open(os.path.join(BASE_DIR, "startup_error.log"), "a",
+        with io.open(os.path.join(DATA_DIR, "startup_error.log"), "a",
                      encoding="utf-8") as fp:
             fp.write(msg + "\n")
     except Exception:
@@ -118,7 +121,7 @@ DEFAULTS = {
 
 def load_bundled_fonts():
     """把 fonts/ 目录里的字体（SF Pro 等）注册进 Qt，供界面选用。"""
-    fonts_dir = os.path.join(BASE_DIR, "fonts")
+    fonts_dir = app_paths.fonts_dir()
     if not os.path.isdir(fonts_dir):
         return
     for name in sorted(os.listdir(fonts_dir)):
@@ -502,6 +505,7 @@ class ArtTask(QRunnable):
 
 class _Bridge(QObject):
     devices = pyqtSignal(list)
+    token_done = pyqtSignal(str, str)        # (凭证, 多行说明)
 
 
 # --------------------------------------------------------------------------- #
@@ -527,6 +531,7 @@ class LyriCastApp(QObject):
         self._tasks = set()          # 保持 QRunnable 引用，防止信号对象被回收
         self._last_lyrics = None     # 当前歌词结果（开全屏时要用）
         self._apple_hint_shown = False   # “配 Apple 凭证”只提示一次
+        self._token_busy = False         # 正在后台读浏览器 cookie
         self._last_art = None        # 当前封面 bytes
         self._art_key = None         # 当前封面对应的曲目（补抓去重用）
         self._overlay_was_visible = True
@@ -542,6 +547,7 @@ class LyriCastApp(QObject):
 
         self.bridge = _Bridge()
         self.bridge.devices.connect(self._on_devices)
+        self.bridge.token_done.connect(self._on_token_done)
 
         self.overlay.request_relyrics.connect(self.relyrics)
         self.overlay.request_fullscreen.connect(self._open_fullscreen)
@@ -863,33 +869,50 @@ class LyriCastApp(QObject):
             self._fetch_apple_token()
 
     def _fetch_apple_token(self):
-        """跑 get_apple_token.py 取凭证（浏览器 cookie）；成功后自动重抓歌词。"""
-        script = os.path.join(BASE_DIR, "get_apple_token.py")
-        if not os.path.exists(script):
-            QMessageBox.warning(None, "Apple Music 凭证",
-                                "找不到 get_apple_token.py（被删了？）")
+        """后台线程里从浏览器读凭证（全程在应用内，不弹命令行窗口）。"""
+        if self._token_busy:
             return
-        import subprocess
-        self.log.info("运行 get_apple_token.py 取 Apple 凭证…")
+        self._token_busy = True
+        self.log.info("从浏览器读取 Apple 凭证…")
         try:
-            proc = subprocess.run(
-                [sys.executable, script], capture_output=True, text=True,
-                encoding="utf-8", errors="replace", timeout=90, cwd=BASE_DIR)
-        except Exception as exc:
-            QMessageBox.warning(None, "Apple Music 凭证", "运行失败：%r" % (exc,))
-            return
-        out = ((proc.stdout or "") + (proc.stderr or "")).strip()
-        head = (out + "\n\n") if out else ""
-        if proc.returncode == 0:
+            self.tray.showMessage(
+                speakers.APP_NAME, "正在从浏览器读取 Apple Music 凭证…",
+                QSystemTrayIcon.MessageIcon.Information, 4000)
+        except Exception:
+            pass
+
+        def work():
+            try:
+                import apple_music
+                token, logs = apple_music.find_browser_token()
+            except Exception as exc:      # 导入/解密失败都归到“没拿到”
+                token, logs = "", ["读取失败：%r" % (exc,)]
+            try:
+                self.bridge.token_done.emit(token, "\n".join(logs))
+            except RuntimeError:          # 退出时信号对象已销毁
+                pass
+
+        threading.Thread(target=work, daemon=True).start()
+
+    def _on_token_done(self, token, logs):
+        """后台取凭证结束：成功就保存并重抓歌词，失败给手动步骤。"""
+        self._token_busy = False
+        import apple_music
+        if token and apple_music.save_user_token(token):
             self._apple_hint_shown = True
-            self.log.info("Apple 凭证已更新")
-            QMessageBox.information(None, "Apple Music 凭证",
-                                    head + "已保存 am_token.txt，马上重新抓歌词…")
+            self.log.info("Apple 凭证已更新（%d 字符）", len(token))
+            QMessageBox.information(
+                None, "Apple Music 凭证",
+                "已找到并保存凭证。\n\n%s\n\n马上重新抓歌词…" % logs)
             self.relyrics()
         else:
-            self.log.warning("取 Apple 凭证失败：%s", out.replace("\n", " "))
-            QMessageBox.warning(None, "Apple Music 凭证",
-                                head + "没拿到凭证。可以按下方说明手动复制。")
+            self.log.warning("取 Apple 凭证失败：%s",
+                             (logs or "").replace("\n", " | "))
+            QMessageBox.warning(
+                None, "Apple Music 凭证",
+                "没拿到凭证。\n\n%s\n\n"
+                "可以按「详细说明」里的步骤在浏览器里手动复制\n"
+                "media-user-token，在「手动粘贴」里保存。" % (logs or "",))
 
     def _open_log_file(self):
         """托盘菜单：直接打开最新日志（Windows 用记事本；别处用默认程序）。"""
@@ -1286,7 +1309,7 @@ class LyriCastApp(QObject):
     def _dump_track(self):
         """把当前曲目的原始信息写进 track_debug.txt（排查匹配不到歌词的歌）。"""
         info = self.current_track or {}
-        path = os.path.join(BASE_DIR, "track_debug.txt")
+        path = os.path.join(DATA_DIR, "track_debug.txt")
         try:
             with io.open(path, "w", encoding="utf-8") as fp:
                 fp.write(u"时间: %s\n" % time.strftime("%Y-%m-%d %H:%M:%S"))
@@ -1331,7 +1354,7 @@ class LyriCastApp(QObject):
         # 逐词歌词要 Apple 凭证：没配过就提示一次，免得用户以为逐词是坏了
         if (not self._apple_hint_shown and result
                 and not (result.get("words") or [])
-                and not os.path.exists(os.path.join(BASE_DIR, "am_token.txt"))):
+                and not os.path.exists(app_paths.token_path())):
             self._apple_hint_shown = True
             try:
                 self.tray.showMessage(
@@ -1373,11 +1396,20 @@ def create_app_shortcut(link_path):
     """用 PowerShell + WScript.Shell 创建快捷方式（仅 Windows；启动时无黑框）。"""
     if sys.platform != "win32" or not link_path:
         return False
-    pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
-    if not os.path.exists(pythonw):
-        pythonw = sys.executable
-    ps1 = os.path.join(BASE_DIR, "dev", "make_shortcut.ps1")
-    icon = os.path.join(BASE_DIR, "icon.ico")
+    if app_paths.is_frozen():               # exe：直接指向自己（图标取 exe 自己的）
+        target = sys.executable
+        args = ""
+        workdir = os.path.dirname(sys.executable)
+        icon = sys.executable
+    else:
+        pythonw = os.path.join(os.path.dirname(sys.executable), "pythonw.exe")
+        if not os.path.exists(pythonw):
+            pythonw = sys.executable
+        target = pythonw
+        args = os.path.join(RES_DIR, "main.py")
+        workdir = RES_DIR
+        icon = app_paths.icon_path()
+    ps1 = app_paths.shortcut_ps1()
     try:
         import subprocess
         subprocess.Popen(
@@ -1385,9 +1417,9 @@ def create_app_shortcut(link_path):
                 "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
                 "-File", ps1,
                 "-LinkPath", link_path,
-                "-Target", pythonw,
-                "-ScriptArgs", os.path.join(BASE_DIR, "main.py"),
-                "-WorkDir", BASE_DIR,
+                "-Target", target,
+                "-ScriptArgs", args,
+                "-WorkDir", workdir,
                 "-Icon", icon if os.path.exists(icon) else "",
             ],
             creationflags=0x08000000,          # CREATE_NO_WINDOW
@@ -1416,7 +1448,7 @@ def main():
     app.setApplicationName(speakers.APP_NAME)
     app.setQuitOnLastWindowClosed(False)
     load_bundled_fonts()
-    icon = os.path.join(BASE_DIR, "icon.ico")
+    icon = app_paths.icon_path()
     if os.path.exists(icon):
         app.setWindowIcon(QIcon(icon))
 

@@ -30,6 +30,10 @@ git clone https://github.com/ChandlerYancug/LyriCast.git && cd LyriCast
 run.bat            # Windows：首次双击会自动建 .venv、装依赖，然后启动
 ```
 
+> **不想装 Python？** [Releases](https://github.com/ChandlerYancug/LyriCast/releases)
+> 页有 **Windows 免安装版（exe zip）**：解压后双击 `LyriCast.exe` 即可，
+> 不用安装任何东西；配置 / Apple 凭证 / 缓存都在 `%LOCALAPPDATA%\LyriCast\`。
+
 macOS / Linux：
 
 ```bash
@@ -512,6 +516,16 @@ QT_QPA_PLATFORM=offscreen pytest -q   # 无显示环境下
 CI 在 `.github/workflows/ci.yml`：Ubuntu / Windows / macOS × Python 3.11 / 3.13，
 跑 `ruff` + `pytest`（离屏）。提 issue / PR 的模板在 `.github/`。
 
+打包 Windows 免安装版（PyInstaller，onedir）：
+
+```bash
+.venv\Scripts\python -m pip install pyinstaller
+.venv\Scripts\python dev/build_exe.py      # 产物：dist/LyriCast/（双击 LyriCast.exe）
+```
+
+打 `v*` tag 会触发 `.github/workflows/release.yml`：自动构建 exe 并挂到对应
+Release；tag 里带 `debug` 的发布为 **pre-release（调试版）**，不覆盖正式版。
+
 开发脚本（`dev/`）：`make_shots.py` 重新生成 `docs/images/` 里的截图与动图，
 `_transwrap_check.py` 是翻译动画/裁切的渲染回归检查，`debug_speaker.py` 导出音箱原始返回。
 
@@ -550,7 +564,7 @@ LyriCast/
 ├── tests/         离线测试（假 DLNA 音箱 / SMTC 假会话 / 轮询链路）
 ├── docs/BACKENDS.md     后端架构、HomePod 说明、如何写新后端
 ├── docs/images/   README 用的截图与演示动图（dev/make_shots.py 生成）
-├── .github/       CI（3 OS × 2 Python）与 issue / PR 模板
+├── .github/       CI（3 OS × 2 Python）、Release（打 tag 自动出 Windows exe）与 issue / PR 模板
 ├── pyproject.toml / requirements.txt
 ├── CHANGELOG.md   版本历史（每次发布都写清楚改了什么）
 ├── run.bat        启动（Windows；首次自动建 .venv 并装依赖，不污染系统 Python；默认无控制台）
@@ -558,6 +572,7 @@ LyriCast/
 ├── .venv/         依赖虚拟环境（run.bat 自动生成，不进仓库）
 └── dev/           开发辅助（日常不用动）
     ├── make_shots.py      生成 docs/images/（截图 + 演示动图）
+    ├── build_exe.py       打包 Windows 免安装版（PyInstaller）
     ├── preview_materials.py  彩胶材质对比图（dev/materials_preview.png）
     ├── preview_tonearms.py   唱臂皮肤对比图（dev/tonearms_preview.png）
     ├── _preview.py        渲染效果预览图（输出到根目录 preview_lyrics_style.png）

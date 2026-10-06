@@ -24,9 +24,9 @@ import xml.etree.ElementTree as ET
 import requests
 
 import lyrics          # 复用相似度 / 占位检测 / 翻译合并（本模块延迟导入，无循环）
+from speakers import paths as app_paths
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-TOKEN_FILE = os.path.join(BASE_DIR, "am_token.txt")
+TOKEN_FILE = app_paths.token_path()
 
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/122.0 Safari/537.36")
@@ -74,6 +74,59 @@ def _load_user_token():
         return ""
 
 
+def save_user_token(token):
+    """把 media-user-token 写进 am_token.txt（exe 模式下在用户目录）。"""
+    token = (token or "").strip()
+    if not token:
+        return False
+    try:
+        os.makedirs(os.path.dirname(TOKEN_FILE), exist_ok=True)
+        with io.open(TOKEN_FILE, "w", encoding="utf-8") as fp:
+            fp.write(token)
+        return True
+    except OSError:
+        return False
+
+
+def find_browser_token():
+    """从浏览器里读 media-user-token（不启动任何其它进程）。
+
+    返回 (token, 说明列表)。GUI 的“自动获取”和 get_apple_token.py
+    共用这一份逻辑；应用内调用不会出现命令行窗口。
+    """
+    logs = []
+    try:
+        import browser_cookie3 as bc
+    except ImportError:
+        return "", ["缺少 browser_cookie3（装依赖时会一起装上）"]
+
+    def _cookies(fn, label):
+        try:
+            return fn(domain_name="music.apple.com")
+        except TypeError:                # 旧版没有 domain_name 参数
+            return fn()
+        except Exception as exc:
+            logs.append("[%s] 打不开 cookie：%s" % (label, exc))
+            return None
+
+    for fn, label in ((bc.chrome, "Chrome"), (bc.edge, "Edge"),
+                      (bc.firefox, "Firefox")):
+        cj = _cookies(fn, label)
+        if cj is None:
+            continue
+        seen = 0
+        for c in cj:
+            if "music.apple.com" in (c.domain or ""):
+                seen += 1
+                if c.name == "media-user-token" and c.value:
+                    logs.append("[%s] 找到 media-user-token（%d 字符）"
+                                % (label, len(c.value)))
+                    return c.value, logs
+        logs.append("[%s] 没有 media-user-token（该域 cookie 数：%d）"
+                    % (label, seen))
+    return "", logs
+
+
 def _fetch_dev_token(timeout=8):
     try:
         r = _get(_PAGES, headers={"User-Agent": UA}, timeout=timeout)
@@ -117,8 +170,7 @@ def _storefront(headers, timeout=8):
         return _sf["value"]
     sf = ""
     try:
-        with io.open(os.path.join(BASE_DIR, "config.json"),
-                     encoding="utf-8") as fp:
+        with io.open(app_paths.config_path(), encoding="utf-8") as fp:
             sf = (json.load(fp).get("apple_storefront") or "").strip()
     except (OSError, ValueError):
         sf = ""

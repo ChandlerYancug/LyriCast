@@ -21,8 +21,10 @@ import os
 import re
 import time
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CACHE_DIR = os.path.join(BASE_DIR, "cache")
+from speakers import paths as app_paths
+
+# exe 模式在用户目录（%LOCALAPPDATA%\LyriCast\cache）；源码运行就在项目里
+CACHE_DIR = app_paths.cache_dir()
 LYRICS_DIR = os.path.join(CACHE_DIR, "lyrics")
 ART_DIR = os.path.join(CACHE_DIR, "art")
 
