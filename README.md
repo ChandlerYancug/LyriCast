@@ -13,8 +13,9 @@ foobar2000 的 UPnP 输出……** 都能用；Windows 上还能读**电脑自�
 > 它自己去读音箱的播放状态，再把歌词画出来。
 >
 > ⚠️ **HomePod / AirPlay 音箱例外**：AirPlay 2 不对外提供播放元数据，
-> HomePod 也没有 DLNA 接口，「直读」走不通 —— 可行方案（同时投送给 Sonos 当“元数据代理” /
-> 电脑端媒体会话 / 麦克风指纹）见 **[docs/BACKENDS.md](docs/BACKENDS.md)**。
+> HomePod 也没有 DLNA 接口，「直读」走不通 —— **在 LyriCast 里搜不到它是正常的**。
+> 可行方案（同时投送给 Sonos 当“元数据代理” / 电脑端媒体会话 / 麦克风指纹）见
+> **[docs/BACKENDS.md](docs/BACKENDS.md)**；程序里也有入口：托盘菜单 →「HomePod / AirPlay 搜不到？」。
 
 ![黑胶播放器](docs/images/player.png)
 
@@ -36,6 +37,9 @@ run.bat            # Windows；其它平台： python3 main.py
 > **提示找不到 Python？** 去 <https://www.python.org/downloads/> 下载安装，
 > 安装时勾选 “Add python.exe to PATH”，之后直接双击 `run.bat` 即可。
 >
+> **想要逐词歌词 + 官方翻译？** 需要一分钟配置一次 Apple Music 凭证，
+> 见下方「Apple Music 源」一节（不配也能用，只是普通歌词）。
+>
 > **编码不用管**：中文 Windows 默认 GBK，程序会自动把输出统一切成 UTF-8
 >（`utf8mode.py`），歌词 / 日志 / 中文路径里的任意字符都能正常显示。
 
@@ -51,7 +55,9 @@ run.bat            # Windows；其它平台： python3 main.py
 ## 依赖
 
 - Python **3.11+**（CI 在 3.11 / 3.13 上验证；更老的版本没测过）
-- 必需：`PyQt6` / `requests` / `pillow`（换电脑时 `py -3 -m pip install -r requirements.txt`）
+- 必需：`PyQt6` / `requests` / `pillow`，以及 `browser_cookie3`（只被
+  `get_apple_token.py` 用到，不配 Apple 凭证就轮不到它）—— 换电脑时一条命令全装：
+  `py -3 -m pip install -r requirements.txt`
 - 可选（按需装，在仓库目录里执行）：`pip install -e ".[smtc]"`（Windows 系统媒体会话）、
   `.[dev]`（测试与 lint）；`.[listen]`（麦克风指纹，路线图）；见 `pyproject.toml`
 - 字体：**开箱即用** —— 仓库随带 OFL 开源字体（拉丁 [Inter]，中文思源黑体子集
@@ -319,19 +325,35 @@ run.bat            # Windows；其它平台： python3 main.py
 > 本地 UPnP 接口拿不到。用右键菜单「导出当前曲目信息」把
 > `track_debug.txt` 发出来，如果里面有音源歌曲 ID，就能做按 ID 精确取词。
 
-### Apple Music 源（默认首选）
+### Apple Music 源（默认首选：逐词 + 翻译）
 
-Apple 的歌词是官方 TTML 数据：**逐词**带精确起止时间，与声音的对齐比 LRC 更准，
-白色填充贴着每一个词的演唱走（不是按整句平均）。使用前提：
+Apple 的歌词是官方 TTML 数据：**逐词**带精确起止时间（白色填充贴着每个词的
+演唱走，不是按整句平均），还带**官方中文翻译**。要用上它，需要配置一次你
+自己账号的凭证（`am_token.txt`）：
 
-1. 项目目录里有 `am_token.txt`（你登录 Apple Music 的凭证，有效期几个月）。
-   过期后：浏览器重新登录 music.apple.com，运行 `get_apple_token.py` 刷新
-   （或按脚本里说明手动复制 cookie 值）。
-2. 用你账号所在区（比如 `in`）。换了账号/区就在 `config.json` 里改
-   `apple_storefront`，或删掉该项让它自动查询。
+1. **浏览器里登录** <https://music.apple.com>（保持登录状态）；
+2. **在项目目录运行**（需要 `browser_cookie3`，按 README 装过 `requirements.txt` 就有）：
 
-> `am_token.txt` 等于你的登录凭证：只存本机、自己看，**别发给别人**。
-> 没凭证、凭证过期、或这首歌没有词时，会**自动回退**到网易云和 LRCLIB，不影响使用。
+   ```bash
+   py -3 get_apple_token.py
+   ```
+
+   脚本会从 Chrome / Edge / Firefox 里读出 `media-user-token` 并写入 `am_token.txt`；
+3. **重启 LyriCast**。
+
+读不到浏览器 cookie 时（新版浏览器会加密），手动来：F12 → Application →
+Cookies → `https://music.apple.com` → 复制 `media-user-token` 的值，存成项目
+目录里的 `am_token.txt`（整个文件就这一行）。
+
+凭证有效期几个月，过期后重跑第 2 步即可；程序里也有入口：**托盘菜单 →
+「Apple Music 凭证（逐词/翻译）…」**。
+
+> `am_token.txt` 等于你的登录凭证：只存本机、自己看，**别发给别人**（已在
+> `.gitignore` 里，不会被误提交）。
+> **没有凭证也完全能用** —— 自动回退到网易云 / LRCLIB 的普通歌词（没有逐词与翻译）。
+
+用你账号所在区（比如 `in`）。换了账号/区就在 `config.json` 里改
+`apple_storefront`，或删掉该项让它自动查询。
 
 逐词数据的附带福利：
 

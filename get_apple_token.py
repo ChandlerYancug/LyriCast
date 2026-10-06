@@ -53,7 +53,8 @@ def main():
     try:
         import browser_cookie3 as bc
     except ImportError:
-        print("需要先安装：python -m pip install browser_cookie3")
+        print("需要先安装：py -3 -m pip install browser_cookie3"
+              "（或在仓库目录：pip install -e \".[token]\"）")
         return 1
     token = None
     for fn, label in ((bc.chrome, "Chrome"), (bc.edge, "Edge"),

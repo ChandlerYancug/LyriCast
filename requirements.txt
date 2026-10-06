@@ -5,6 +5,10 @@
 # Optional extras live in pyproject.toml, install from the repo root:
 #   pip install -e ".[listen]"   # mic + audio fingerprint (roadmap, see docs/BACKENDS.md)
 #   pip install -e ".[dev]"      # pytest / ruff
+#   pip install -e ".[smtc]"     # Windows system media session backend
 PyQt6>=6.5
 requests>=2.28
 pillow>=9.0
+# Used by get_apple_token.py to read the "media-user-token" cookie out of your
+# browser (needed once for per-word Apple Music lyrics + translations).
+browser_cookie3>=0.19

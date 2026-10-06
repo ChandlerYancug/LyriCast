@@ -62,7 +62,7 @@ if not _qt_ok:
 
 from PyQt6.QtCore import QObject, QRunnable, QThread, QThreadPool, QTimer, Qt, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QFontDatabase, QIcon, QPainter, QPixmap
-from PyQt6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+from PyQt6.QtWidgets import QApplication, QMenu, QMessageBox, QSystemTrayIcon
 
 import lyrics as lyrics_mod
 import relclock
@@ -523,6 +523,7 @@ class LyriCastApp(QObject):
         self.current_track = None
         self._tasks = set()          # 保持 QRunnable 引用，防止信号对象被回收
         self._last_lyrics = None     # 当前歌词结果（开全屏时要用）
+        self._apple_hint_shown = False   # “配 Apple 凭证”只提示一次
         self._last_art = None        # 当前封面 bytes
         self._art_key = None         # 当前封面对应的曲目（补抓去重用）
         self._overlay_was_visible = True
@@ -570,6 +571,7 @@ class LyriCastApp(QObject):
         menu.addAction("打开黑胶播放器", lambda: self._show_player())
         menu.addAction("播放器：全屏 / 窗口 切换", self._toggle_player_fullscreen)
         menu.addAction("重新搜索歌词", self.relyrics)
+        menu.addAction("Apple Music 凭证（逐词/翻译）…", self._show_apple_token_help)
         menu.addAction("清空歌词/封面缓存", self._clear_cache)
         menu.addAction("导出当前曲目信息（排查用）", self._dump_track)
         menu.addSeparator()
@@ -579,6 +581,7 @@ class LyriCastApp(QObject):
         menu.addMenu(self.speaker_menu)
         menu.addAction("搜索音箱设备…", self._search_devices)
         menu.addAction("重新发现（忽略已保存设备）", self._rediscover)
+        menu.addAction("HomePod / AirPlay 搜不到？", self._open_homepod_docs)
         menu.addSeparator()
         menu.addAction("黑胶转速 慢一点", lambda: self._nudge_vinyl(+3.0))
         menu.addAction("黑胶转速 快一点", lambda: self._nudge_vinyl(-3.0))
@@ -787,6 +790,31 @@ class LyriCastApp(QObject):
         except Exception as exc:
             self.overlay.set_status("打开日志目录失败：%r\n%s" % (exc, path))
 
+    # ---- 两个新手最容易卡住的点的入口（都放在托盘里，不用去翻文档）---- #
+    def _open_homepod_docs(self):
+        """托盘菜单：HomePod / AirPlay 为什么搜不到、怎么办。"""
+        try:
+            from PyQt6.QtCore import QUrl
+            from PyQt6.QtGui import QDesktopServices
+            QDesktopServices.openUrl(QUrl(
+                "https://github.com/ChandlerYancug/LyriCast/"
+                "blob/main/docs/BACKENDS.md"))
+        except Exception as exc:
+            self.overlay.set_status("打开说明失败：%r" % (exc,))
+
+    def _show_apple_token_help(self):
+        """托盘菜单：逐词歌词 / 翻译需要配置 Apple Music 凭证。"""
+        QMessageBox.information(
+            None, "%s · Apple Music 凭证" % speakers.APP_NAME,
+            "想要逐词歌词和中文翻译，需要配置一次 Apple Music 凭证：\n\n"
+            "1. 浏览器登录 https://music.apple.com（保持登录）；\n"
+            "2. 在本项目目录运行：  py -3 get_apple_token.py\n"
+            "   （读不到浏览器 cookie 时按脚本提示，手动复制\n"
+            "     media-user-token 的值存成 am_token.txt）\n"
+            "3. 重启本程序。\n\n"
+            "凭证有效期几个月，过期后重跑第 2 步即可。\n"
+            "没有凭证也能用，只是没有逐词高亮和翻译（退回普通歌词）。")
+
     def _on_speaker_lost(self, msg):
         """连续读不到音箱：重新发现（节流，避免设备真关机时反复搜索）。"""
         now = time.monotonic()
@@ -807,8 +835,10 @@ class LyriCastApp(QObject):
             return
         if not devices:
             self.overlay.set_status(
-                "未发现音箱设备\n请确认与本机同一局域网、音箱已开机，"
-                "或在 config.json 里填 speaker_host（及 upnp 的 speaker_location）"
+                "未发现音箱设备\n"
+                "· HomePod / 纯 AirPlay 音箱没有可读接口，搜不到是正常的\n"
+                "  （点托盘菜单「HomePod / AirPlay 搜不到？」有办法）\n"
+                "· 其它音箱：确认已开机、与本机同一 Wi-Fi；或手动填 config.json"
             )
             self._schedule_retry(15000)
             return
@@ -1200,6 +1230,19 @@ class LyriCastApp(QObject):
                        result.get("synced") else
                        "逐行 %d 行" % len(result.get("plain") or [])),
                       "有" if art else "无")
+        # 逐词歌词要 Apple 凭证：没配过就提示一次，免得用户以为逐词是坏了
+        if (not self._apple_hint_shown and result
+                and not (result.get("words") or [])
+                and not os.path.exists(os.path.join(BASE_DIR, "am_token.txt"))):
+            self._apple_hint_shown = True
+            try:
+                self.tray.showMessage(
+                    speakers.APP_NAME,
+                    "当前是普通歌词。配置 Apple Music 凭证后会有逐词高亮和翻译"
+                    "（托盘菜单 →「Apple Music 凭证」）",
+                    QSystemTrayIcon.MessageIcon.Information, 8000)
+            except Exception:
+                pass
         self._last_lyrics = result
         self.overlay.set_lyrics(result)
         self.fullscreen.set_lyrics(result)

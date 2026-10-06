@@ -27,6 +27,8 @@ smtc = [
     "winrt-Windows.Media.Control>=2.3",
 ]
 dev = ["pytest>=7", "ruff>=0.4"]
+# 取 Apple Music 凭证（get_apple_token.py 读浏览器 cookie 用）
+token = ["browser_cookie3>=0.19"]
 
 [project.scripts]
 lyricast = "main:main"
