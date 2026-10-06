@@ -9,11 +9,13 @@
 """
 
 import math
+import sys
 import time
 from bisect import bisect_right
 from collections import OrderedDict
 
 import timing
+import tonearm
 import vinyl
 
 from speakers.http import APP_NAME
@@ -364,6 +366,7 @@ class FullscreenView(QWidget):
         self._art_prev = None
         self._vinyl_fade_ts = 0.0
         self._vinyl_mat = vinyl.pick(cfg, "")   # 唱片材质（彩胶）：默认随机一款
+        self._arm_skin = tonearm.pick(cfg, "")  # 唱臂皮肤：默认同样按歌随机
         self._shadow_pm = None      # 封面色彩的柔影（YesPlayMusic 的 .shadow 做法）
         self._shadow_key = None
         self._arm_off = 0.0         # 唱臂抬起角（暂停时向外摆）
@@ -400,6 +403,8 @@ class FullscreenView(QWidget):
     def showEvent(self, event):
         super().showEvent(event)
         self._last_frame = time.monotonic()
+        if self.isFullScreen():
+            self._kill_win_edges()      # 窗口被 Qt 重建过时补一次
         self._shown_at = time.monotonic()
         self._bar_t = 1.0
         self._bar_target = 1.0
@@ -449,6 +454,8 @@ class FullscreenView(QWidget):
             self._nudge_offset(+0.05)
         elif key == Qt.Key.Key_M:                # M ：换一种彩胶材质
             self.cycle_material()
+        elif key == Qt.Key.Key_N:                # N ：换一支唱臂皮肤
+            self.cycle_tonearm()
         else:
             super().keyPressEvent(event)
 
@@ -462,6 +469,23 @@ class FullscreenView(QWidget):
         self._plate_key = None
         self._toast_text = "唱片材质：%s" % self._vinyl_mat["name"]
         self._toast_until = time.monotonic() + 1.4
+        self.update()
+
+    def cycle_tonearm(self):
+        """换一支唱臂（托盘菜单）；写进配置，固定下来。"""
+        self._arm_skin = tonearm.next_of(self._arm_skin)
+        self.cfg["tonearm_skin"] = self._arm_skin["id"]
+        self._toast_text = "唱臂：%s" % self._arm_skin["name"]
+        self._toast_until = time.monotonic() + 1.4
+        self.update()
+
+    def set_tonearm_auto(self):
+        """恢复“跟随每首歌自动换唱臂”。"""
+        self.cfg["tonearm_skin"] = "auto"
+        key = "%s|%s" % (self.title, self.artist)
+        self._arm_skin = tonearm.pick(self.cfg, key)
+        self._toast_text = "唱臂：跟随每首歌（%s）" % self._arm_skin["name"]
+        self._toast_until = time.monotonic() + 1.6
         self.update()
 
     def _vinyl_swap(self):
@@ -491,6 +515,8 @@ class FullscreenView(QWidget):
         if mat["id"] != self._vinyl_mat["id"]:
             self._vinyl_mat = mat
             self._plate_key = None              # 换材质 → 盘体重画
+        # 唱臂皮肤：auto 时同样按歌定种子（一支臂配一张唱片）
+        self._arm_skin = tonearm.pick(self.cfg, "%s|%s" % (self.title, self.artist))
         self.duration = float(info.get("duration") or 0.0)
         self.status_text = ""           # 搜索期间留白，不再闪“正在搜索歌词…”
         self._lines, self._times, self._plain = [], [], []
@@ -1501,7 +1527,7 @@ class FullscreenView(QWidget):
         return self._plate_pm
 
     def _draw_tonearm(self, p, cx, cy, R):
-        """唱臂（自制，仿黑胶唱机）：右上枢轴 + 铝管 + 唱头/唱针 + 配重。
+        """唱臂：几何（枢轴/落点/抬臂）在这里算，样子交给 tonearm.py 的皮肤。
 
         唱臂从盘外右上斜进沟槽区，唱针落在 VINYL_ARM_HIT（≈0.8R，
         外圈音轨）；暂停时向外轻抬 VINYL_ARM_LIFT 度，像抬臂待机。
@@ -1514,68 +1540,11 @@ class FullscreenView(QWidget):
         dx, dy = cx + R * hx - px, cy + R * hy - py
         L = math.hypot(dx, dy)
         ang = math.degrees(math.atan2(dy, dx))
+        tonearm.draw_static(p, px, py, R, self._arm_skin)   # 信号线（不随臂转）
         p.save()
         p.translate(px, py)
         p.rotate(ang + self._arm_off)
-
-        # 投影：盘面上的一层柔影，让唱臂“浮”在唱片上方
-        p.setPen(QPen(QColor(0, 0, 0, 70), R * 0.030))
-        p.drawLine(QPointF(-R * 0.20, R * 0.045), QPointF(L * 0.92, R * 0.045))
-
-        # 铝管：竖向渐变当圆柱高光（本帧坐标 +x = 臂长方向）
-        tg = QLinearGradient(0, -R * 0.034, 0, R * 0.034)
-        tg.setColorAt(0.0, QColor(104, 110, 118))
-        tg.setColorAt(0.30, QColor(238, 242, 247))
-        tg.setColorAt(0.60, QColor(146, 152, 161))
-        tg.setColorAt(1.0, QColor(48, 52, 59))
-        pen = QPen(QBrush(tg), R * 0.024)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        p.setPen(pen)
-        p.drawLine(QPointF(-R * 0.22, 0.0), QPointF(L * 0.86, 0.0))
-
-        # 唱头（headshell + 唱头壳）：带偏角，像真唱臂的 offset angle
-        p.save()
-        p.translate(L * 0.84, 0.0)
-        p.rotate(22.0)
-        hw, hh = R * 0.150, R * 0.052
-        hg = QLinearGradient(0, -hh, 0, hh)
-        hg.setColorAt(0.0, QColor(226, 231, 238))
-        hg.setColorAt(0.45, QColor(122, 128, 136))
-        hg.setColorAt(1.0, QColor(36, 39, 45))
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(-R * 0.016, -hh / 2.0, hw, hh),
-                            hh * 0.32, hh * 0.32)
-        p.setPen(QPen(QColor(0, 0, 0, 110), 1.0))
-        p.setBrush(QBrush(hg))
-        p.drawPath(path)
-        # 唱针：从唱头前端伸出的细针 + 针尖亮点
-        p.setPen(QPen(QColor(214, 218, 224, 230), R * 0.009))
-        p.drawLine(QPointF(hw - R * 0.016, 0.0),
-                   QPointF(hw + R * 0.034, R * 0.020))
-        p.setPen(Qt.PenStyle.NoPen)
-        p.setBrush(QColor(244, 247, 252, 240))
-        p.drawEllipse(QPointF(hw + R * 0.034, R * 0.020), R * 0.011,
-                      R * 0.011)
-        p.restore()
-
-        # 配重（枢轴后方）+ 枢轴底座
-        cw = QLinearGradient(0, -R * 0.05, 0, R * 0.05)
-        cw.setColorAt(0.0, QColor(96, 101, 109))
-        cw.setColorAt(0.4, QColor(58, 62, 69))
-        cw.setColorAt(1.0, QColor(28, 30, 35))
-        p.setPen(QPen(QColor(0, 0, 0, 120), 1.2))
-        p.setBrush(QBrush(cw))
-        p.drawEllipse(QRectF(-R * 0.30, -R * 0.052, R * 0.16, R * 0.104))
-        base = QRadialGradient(-R * 0.018, -R * 0.018, R * 0.085)
-        base.setColorAt(0.0, QColor(204, 209, 217))
-        base.setColorAt(0.62, QColor(118, 124, 133))
-        base.setColorAt(1.0, QColor(52, 56, 63))
-        p.setPen(QPen(QColor(0, 0, 0, 110), 1.2))
-        p.setBrush(QBrush(base))
-        p.drawEllipse(QRectF(-R * 0.070, -R * 0.070, R * 0.140, R * 0.140))
-        p.setPen(QPen(QColor(24, 26, 30, 200), R * 0.013))
-        p.setBrush(Qt.BrushStyle.NoBrush)
-        p.drawEllipse(QRectF(-R * 0.030, -R * 0.030, R * 0.060, R * 0.060))
+        tonearm.draw(p, R, L, self._arm_skin)
         p.restore()
 
     def _draw_header(self, p, area):
@@ -2336,11 +2305,30 @@ class FullscreenView(QWidget):
         self.raise_()
         self.activateWindow()
 
-    # 全屏时用无边框窗口，避免 Windows 在屏幕边缘留出 1px 白边
+    # 全屏时用无边框窗口，并在 Windows 11 上关掉系统圆角/描边
+    # （否则四个角会露出细细的桌面白边）
     def showFullScreen(self):
         if not (self.windowFlags() & Qt.WindowType.FramelessWindowHint):
             self.setWindowFlag(Qt.WindowType.FramelessWindowHint, True)
         super().showFullScreen()
+        self._kill_win_edges()
+
+    def _kill_win_edges(self):
+        """Windows 11：给窗口设 DONOTROUND / 无边框色，消掉全屏白边。"""
+        if sys.platform != "win32":
+            return
+        try:
+            import ctypes
+            hwnd = int(self.winId())
+            dwm = ctypes.windll.dwmapi
+            pref = ctypes.c_int(1)          # DWMWCP_DONOTROUND
+            dwm.DwmSetWindowAttribute(hwnd, 33, ctypes.byref(pref),
+                                      ctypes.sizeof(pref))
+            none = ctypes.c_uint(0xFFFFFFFE)   # DWMWA_COLOR_NONE
+            dwm.DwmSetWindowAttribute(hwnd, 34, ctypes.byref(none),
+                                      ctypes.sizeof(none))
+        except Exception:
+            pass
 
     def showNormal(self):
         was_frameless = bool(

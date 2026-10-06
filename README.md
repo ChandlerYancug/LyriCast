@@ -131,8 +131,8 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
   表层（沟槽 + 导入槽 + 外缘亮环 + 斜反射）。**花纹层随盘旋转，沟槽和反光不转**
   （同心沟槽转了看不出，而反光是打在盘面上的光，不该跟着唱片转）；中心是**圆裁切的
   专辑封面当唱片标签**（随盘旋转，**中间没有中心孔/黑洞**，直径约为唱片的 58%）；
-  右上角一支唱臂（枢轴底座 + 圆柱渐变铝管 + 带偏角的唱头/唱针 + 配重）斜伸到外圈
-  沟槽；**暂停时唱臂向外轻抬**、盘停转
+  右上角一支唱臂（枢轴底座 + 信号线 + 亮面铝管 + 带偏角的唱头/唱针 + 配重）斜伸到
+  外圈沟槽；**暂停时唱臂向外轻抬**、盘停转
 - **切歌换盘**：换歌（或按 `M` 换材质）时，旧盘面与旧封面**交叉淡入**到新盘（0.45s），
   同时唱臂抬起再落下 —— 像真的换了张唱片
 - **唱片投影**：抄 [YesPlayMusic](https://github.com/qier222/YesPlayMusic) 歌词页的
@@ -160,6 +160,23 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
   | `smoke` | 烟熏胶 | 半透灰底 + 烟雾状色块 |
 
   想固定一款就用 `config.json` 里的 `vinyl_material`（填上面的 id，`"auto"` 为随机）。
+- **唱臂皮肤（8 支，致敬真实经典）**：和彩胶同一套玩法 —— 按歌随机换（`auto`），
+  也能固定一支（`config.json` 的 `tonearm_skin`；托盘菜单「换一支唱臂」会固定下来，
+  播放器里按 `N` 换下一支）：
+
+  | id | 唱臂 | 造型 |
+  | --- | --- | --- |
+  | `sme3009` | SME 3009 · 铬 | S 形铬管 + 开孔铝唱头架 + 青铜轴承座（60 年代英国经典） |
+  | `sme-v` | SME V · 黑镁 | 直臂黑镁管，唱头直装、无独立架子 |
+  | `rega` | Rega RB · 哑黑 | 一体成型哑光黑直臂，极简英式 |
+  | `sl1200` | SL-1200 · DJ | Technics 银 S 臂 + 黑架子 + 白唱头（Shure 风） |
+  | `at95` | AT95E · 绿头 | 银色直臂 + 经典绿唱头（Audio-Technica 的味道） |
+  | `2m-blue` | 2M Blue · 蓝头 | 枪灰直管 + 蓝色唱头（Ortofon） |
+  | `concorde` | Concorde · DJ | 锥形一体蓝唱头 + 银环（Ortofon DJ 经典） |
+  | `ekos` | Ekos · 钛灰 | 黑管 + 烟熏唱头架 + 铬环配重（Linn 气质） |
+
+  管身用「暗边 + 亮面 + 居中高光」三层描边画，弯管上也有圆柱感；想加自己的
+  配色照 `tonearm.py` 的模板加一条即可。
 - **翻译“四周汇聚”入场（只在当前行）**：每个字从各自方向（确定性伪随机，稳定不跳）
   的偏移处**由虚到实**浮入到最终位置，并带几层幽灵描边做方向柔化 —— 行内时间驱动，
   暂停时自然冻结；翻译字号 0.60×、Bold 字重、亮度 0.65（后两项对齐 YesPlayMusic 的
@@ -210,6 +227,7 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 | `↑` `↓` | 音量 ±2 |
 | `[` `]` | 歌词偏移 −0.05s / +0.05s（画面下方实时显示当前值） |
 | `M` | 换一种彩胶材质（画面下方显示材质名） |
+| `N` | 换一支唱臂皮肤（画面下方显示名字） |
 | `F11` | 窗口 / 全屏 切换 |
 | `Esc` | 全屏时退回窗口；窗口时隐藏到托盘 |
 
@@ -288,10 +306,12 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 ### 启动
 
 - 双击桌面 **「LyriCast」** 快捷方式即可（`pythonw` 启动，无黑框；Windows）
+- 双击 `run.bat` 也一样（首次会自动建 `.venv` 装依赖，之后静默启动，无黑框）
 - **默认打开的是「黑胶播放器」窗口**：有标题栏、可缩放、可最小化，
   跟普通程序一样；想全屏随时切（双击画面 / `F11` / 右键菜单）
 - 想开机自动运行：托盘图标右键 → 勾上 **开机自启**
-- 开发/排错时用 `run.bat`（带控制台，能看到输出）
+- 想看实时日志：双击 `run-console.bat`（带控制台）；
+  平时也可用托盘菜单「查看运行日志（记事本）」/「打开日志文件夹」
 
 如果想改回“启动只开悬浮小条”，把 `config.json` 里的 `start_view` 改成 `"bar"` 即可；
 希望一启动就全屏，就把 `player_fullscreen` 改成 `true`。
@@ -319,6 +339,7 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 | `lyrics_offset_sec` | 全局歌词偏移（秒），正数=歌词延后 |
 | `vinyl_turn_seconds` | 唱片转一圈的秒数（默认 12） |
 | `vinyl_material` | 唱片材质：`"auto"`＝按歌随机彩胶；也可固定填 `black` / `white` / `clear` / `galaxy` / `splatter` …（见上面彩胶表） |
+| `tonearm_skin` | 唱臂皮肤：`"auto"`＝按歌随机；也可固定填 `sme3009` / `sl1200` / `2m-blue` …（见上面唱臂表） |
 | `start_view` | `player`＝启动开黑胶播放器（默认）；`bar`＝只开悬浮歌词条 |
 | `player_fullscreen` | 播放器是否以全屏启动（默认 `false`＝窗口） |
 | `player_size` / `player_pos` | 播放器窗口尺寸与位置，自动记录 |
@@ -517,6 +538,7 @@ LyriCast/
 ├── cache.py       歌词 / 封面磁盘缓存
 ├── overlay.py     悬浮歌词窗（自绘 + 60fps 动画）
 ├── fullscreen.py  全屏歌词模式（旋转黑胶 + 模糊封面背景）
+├── tonearm.py     唱臂皮肤（ 8 支致敬经典的造型，见「唱臂皮肤」表）
 ├── config.example.json  配置模板（真配置 config.json 不进仓库）
 ├── am_token.txt   Apple Music 凭证（自己可见，别外传；不进仓库）
 ├── get_apple_token.py   一键刷新 Apple 凭证（写 am_token.txt）
@@ -528,10 +550,13 @@ LyriCast/
 ├── docs/images/   README 用的截图与演示动图（dev/make_shots.py 生成）
 ├── .github/       CI（3 OS × 2 Python）与 issue / PR 模板
 ├── pyproject.toml / requirements.txt
-├── run.bat        启动（Windows；首次自动建 .venv 并装依赖，不污染系统 Python）
+├── run.bat        启动（Windows；首次自动建 .venv 并装依赖，不污染系统 Python；默认无控制台）
+├── run-console.bat  同 run.bat，但保留控制台窗口（看实时日志用）
 ├── .venv/         依赖虚拟环境（run.bat 自动生成，不进仓库）
 └── dev/           开发辅助（日常不用动）
     ├── make_shots.py      生成 docs/images/（截图 + 演示动图）
+    ├── preview_materials.py  彩胶材质对比图（dev/materials_preview.png）
+    ├── preview_tonearms.py   唱臂皮肤对比图（dev/tonearms_preview.png）
     ├── _preview.py        渲染效果预览图（输出到根目录 preview_lyrics_style.png）
     ├── _transwrap_check.py 翻译动画/折行/裁切的渲染回归检查
     ├── debug_speaker.py   诊断：导出音箱原始返回（debug.bat 双击跑）

@@ -7,6 +7,9 @@ rem Dependencies live in a project-local virtualenv (.venv), so the system
 rem Python installation is never touched. The first run creates .venv and
 rem installs requirements.txt; later runs only reinstall when
 rem requirements.txt actually changed (MD5 stamp).
+rem
+rem Launches silently (pythonw, no console). For live logs run
+rem run-console.bat, or use the tray menu item "view log" (Notepad).
 chcp 65001 >nul
 set PYTHONUTF8=1
 cd /d "%~dp0"
@@ -58,6 +61,11 @@ pause
 exit /b 1
 
 :run
+if /i "%~1"=="console" goto run_console
+start "" "%VENV%\Scripts\pythonw.exe" main.py
+exit /b 0
+
+:run_console
 "%VPY%" main.py
 if errorlevel 1 (
     echo.

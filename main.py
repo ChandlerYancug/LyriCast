@@ -102,6 +102,7 @@ DEFAULTS = {
     "lyrics_offset_sec": 0.0,
     "vinyl_turn_seconds": 12.0,
     "vinyl_material": "auto",      # auto = 按歌随机彩胶；也可固定某款（见 vinyl.py）
+    "tonearm_skin": "auto",       # 唱臂皮肤：auto = 按歌随机；也可固定某支（见 tonearm.py）
     "media_keys": True,
     "volume_keys_speaker": True,     # 键盘音量键接管来调音箱（否则调系统音量）
     "start_view": "player",          # player = 开黑胶播放器；bar = 只开悬浮歌词条
@@ -588,6 +589,12 @@ class LyriCastApp(QObject):
         menu.addAction("黑胶转速 慢一点", lambda: self._nudge_vinyl(+3.0))
         menu.addAction("黑胶转速 快一点", lambda: self._nudge_vinyl(-3.0))
         menu.addAction("换一张彩胶", self._cycle_vinyl)
+        menu.addAction("换一支唱臂", self._cycle_tonearm)
+        auto_arm = menu.addAction("唱臂：跟随每首歌（自动换）")
+        auto_arm.setCheckable(True)
+        auto_arm.setChecked(
+            str(self.cfg.get("tonearm_skin", "auto")).lower() == "auto")
+        auto_arm.triggered.connect(self._set_tonearm_auto)
         menu.addSeparator()
         mk = menu.addAction("多媒体键控制音箱（全局）")
         mk.setCheckable(True)
@@ -604,6 +611,7 @@ class LyriCastApp(QObject):
         auto.triggered.connect(self._toggle_autostart)
         menu.addSeparator()
         menu.addAction("打开日志文件夹", self._open_logs)
+        menu.addAction("查看运行日志（记事本）", self._open_log_file)
         menu.addSeparator()
         menu.addAction("退出", self.quit)
         self.tray.setContextMenu(menu)
@@ -887,6 +895,20 @@ class LyriCastApp(QObject):
             QMessageBox.warning(None, "Apple Music 凭证",
                                 head + "没拿到凭证。可以按下方说明手动复制。")
 
+    def _open_log_file(self):
+        """托盘菜单：直接打开最新日志（Windows 用记事本；别处用默认程序）。"""
+        path = speakers.log_path()
+        try:
+            import subprocess
+            if sys.platform == "win32":
+                subprocess.Popen(["notepad.exe", path])
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", path])
+            else:
+                subprocess.Popen(["xdg-open", path])
+        except Exception as exc:
+            self.overlay.set_status("打开日志失败：%r\n%s" % (exc, path))
+
     def _on_speaker_lost(self, msg):
         """连续读不到音箱：重新发现（节流，避免设备真关机时反复搜索）。"""
         now = time.monotonic()
@@ -1125,6 +1147,20 @@ class LyriCastApp(QObject):
         if not self.fullscreen.isVisible():
             self._show_player()
         self.fullscreen.cycle_material()
+
+    def _cycle_tonearm(self):
+        """换一支唱臂：写进配置固定下来（重启后也保持）。"""
+        if not self.fullscreen.isVisible():
+            self._show_player()
+        self.fullscreen.cycle_tonearm()
+        save_config(self.cfg)
+
+    def _set_tonearm_auto(self):
+        """唱臂恢复 auto：跟随每首歌自动换。"""
+        if not self.fullscreen.isVisible():
+            self._show_player()
+        self.fullscreen.set_tonearm_auto()
+        save_config(self.cfg)
 
     # ---- 全局多媒体键（仅 Windows） ------------------------------------- #
     def _setup_media_keys(self, enable=None):
@@ -1372,6 +1408,15 @@ def create_app_shortcut(link_path):
 
 
 def main():
+    if sys.platform == "win32":
+        # 固定 AppUserModelID：任务栏/通知按“LyriCast”归类，
+        # 图标才会用我们的 icon.ico，而不是 pythonw.exe 的 Python 图标
+        try:
+            import ctypes
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                "ChandlerYancug.LyriCast")
+        except Exception:
+            pass
     speakers.setup()                      # 日志：文件 + 控制台（有终端时）
     speakers.install_excepthook()
     log = speakers.get_logger("main")
