@@ -8,6 +8,7 @@ venv/
 build/
 dist/
 *.egg-info/
+*.spec
 
 # ---------------- 个人配置（含音箱 IP / 凭证，绝不进仓库） ----------------
 config.json

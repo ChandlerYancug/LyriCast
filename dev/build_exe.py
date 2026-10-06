@@ -26,7 +26,7 @@ def main():
     try:
         import PyInstaller.__main__ as pyi
     except ImportError:
-        print("需要先安装 PyInstaller：python -m pip install pyinstaller")
+        print("PyInstaller not installed. Run: python -m pip install pyinstaller")
         return 1
     os.chdir(BASE)
     sep = ";" if sys.platform == "win32" else ":"
@@ -53,10 +53,11 @@ def main():
     pyi.run(args)
     exe = os.path.join(BASE, "dist", "LyriCast", "LyriCast.exe")
     if os.path.exists(exe):
-        print("完成：%s" % exe)
-        print("整个 dist/LyriCast 文件夹就是免安装版（可压缩后分发）。")
+        print("OK: %s" % exe)
+        print("The whole dist/LyriCast folder is the portable build "
+              "(zip it to ship).")
         return 0
-    print("没找到产物，看看上面的日志。")
+    print("No artifact found - check the log above.")
     return 1
 
 
