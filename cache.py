@@ -30,7 +30,8 @@ ART_DIR = os.path.join(CACHE_DIR, "art")
 
 NEGATIVE_TTL = 7 * 24 * 3600      # “没找到”保留 7 天
 ART_MAX_FILES = 300               # 封面最多缓存张数
-_CACHE_VERSION = "4"              # 核验/解析逻辑升级时 +1，旧缓存自动失效
+_CACHE_VERSION = "5"              # 核验/解析逻辑升级时 +1，旧缓存自动失效
+                                  # v5：丢掉网易云开头的“作词/作曲/编曲…”制作人员行
 
 _WS = re.compile(r"\s+")
 

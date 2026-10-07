@@ -28,6 +28,24 @@ _PLACEHOLDER_RE = re.compile(
     re.I,
 )
 
+# OST / 专辑类歌曲，网易云会把制作人员表放在歌词最前面（"作词 : …"）；
+# 这不是歌词，会让界面看起来完全乱掉，开头的这类行要丢掉。
+_CREDIT_RE = re.compile(
+    u"^\\s*(作词|作曲|编曲|制作人|监制|出品|发行|录音师?|混音师?|母带|指挥家|"
+    u"吉他|贝斯|低音吉他|鼓|鼓手|键盘|钢琴|弦乐|和声|人声|配唱|演唱|合声|"
+    u"produced by|composer|lyricist|arranged by|mixed by|mastered by|"
+    u"guitar|bass|drums?|piano|strings|vocals?)\\s*[:：]",
+    re.I,
+)
+
+
+def _strip_credits(rows, max_drop=12):
+    """丢掉开头的“作词/作曲/编曲/指挥家…”制作人员行（最多丢 max_drop 行）。"""
+    i = 0
+    while i < len(rows) and i < max_drop and _CREDIT_RE.match(rows[i][1]):
+        i += 1
+    return rows[i:] if i else rows
+
 
 # --------------------------------------------------------------------------- #
 # LRC 解析
@@ -169,7 +187,7 @@ def from_netease(title, artist, album=None, duration=None, timeout=8,
     songs = _netease_candidates(title, artist, duration, timeout)
     for song in songs[:max_candidates]:
         lrc, tlrc = _netease_lyrics(song["id"], timeout)
-        orig = parse_lrc(lrc)
+        orig = _strip_credits(parse_lrc(lrc))
         if not orig or _looks_placeholder([t for _, t in orig]):
             continue
         trans = parse_lrc(tlrc)
