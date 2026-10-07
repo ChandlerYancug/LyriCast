@@ -67,6 +67,7 @@ def _get(url, headers=None, params=None, timeout=8):
 # 凭证
 # --------------------------------------------------------------------------- #
 def _load_user_token():
+    app_paths.import_token_if_missing()      # 另一处有凭证就搬过来
     try:
         with io.open(TOKEN_FILE, encoding="utf-8") as fp:
             return fp.read().strip()

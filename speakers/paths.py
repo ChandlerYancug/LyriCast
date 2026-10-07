@@ -62,3 +62,40 @@ def icon_path():
 def shortcut_ps1():
     """创建快捷方式用的脚本（源码在 dev/ 下；exe 里由打包脚本带进去）。"""
     return os.path.join(bundle_dir(), "dev", "make_shortcut.ps1")
+
+
+def import_token_if_missing():
+    """另一处有 am_token.txt 就搬过来（只搬一次，不覆盖现有的）。
+
+    常见场景：源码版配好的凭证，换 exe 版跑时不用重配（反之亦然），
+    或者把 am_token.txt 放在 exe 旁边当便携版。返回搬来的源路径（没搬则空）。
+    """
+    dst = token_path()
+    if os.path.exists(dst):
+        return ""
+    cands = []
+    if is_frozen():
+        cands.append(os.path.join(
+            os.path.dirname(os.path.abspath(sys.executable)), "am_token.txt"))
+    else:
+        if sys.platform == "win32":
+            base = os.environ.get("LOCALAPPDATA") or ""
+            if base:
+                cands.append(os.path.join(base, APP_DIR, "am_token.txt"))
+        cands.append(os.path.join(os.path.expanduser("~"),
+                                  "." + APP_DIR.lower(), "am_token.txt"))
+    for src in cands:
+        try:
+            if not os.path.isfile(src):
+                continue
+            with open(src, "r", encoding="utf-8") as fp:
+                data = fp.read().strip()
+            if not data:
+                continue
+            os.makedirs(os.path.dirname(dst), exist_ok=True)
+            with open(dst, "w", encoding="utf-8") as fp:
+                fp.write(data)
+            return src
+        except OSError:
+            continue
+    return ""
