@@ -1,28 +1,37 @@
 # -*- coding: utf-8 -*-
-"""日志：滚动文件 + 控制台（有终端时）。
+"""日志：默认安静，排查时再开。
 
-为什么不用 print：开源后“读不到曲目 / 连不上音箱”这类问题必须能靠一份日志定位。
-日志落在用户目录（不是仓库里，避免污染与泄露）：
+日常使用不写日志文件（保持简洁）；开源后「读不到曲目 / 连不上音箱」这类问题
+要靠一份日志定位，托盘菜单勾「记录运行日志（排查用）」即可开启
+（写滚动文件 + DEBUG），之后「打开日志文件夹」把文件发到 Issues。
 
-    Windows   %LOCALAPPDATA%\\LyriCast\\logs\\lyricast.log
-    其它平台   ~/.lyricast/logs/lyricast.log
-    （可用环境变量 LYRICAST_LOG_DIR 覆盖；托盘菜单里有“打开日志文件夹”）
+    文件位置  Windows  %LOCALAPPDATA%\\LyriCast\\logs\\lyricast.log
+             其它平台  ~/.lyricast/logs/lyricast.log
+    （可用环境变量 LYRICAST_LOG_DIR 覆盖）
 
-- 单文件 1 MB、保留 3 份（RotatingFileHandler），长期挂着也不会撑爆磁盘；
-- 控制台只在 stderr 存在时挂（pythonw 启动时没有，自动跳过）；
-- urllib3 / requests / PIL 压到 WARNING，避免噪音把关键信息埋掉；
-- 未捕获异常走 excepthook 记一条 CRITICAL，方便用户直接把日志发出来。
+- 文件日志：单文件 1 MB、保留 3 份（RotatingFileHandler），开着不管也不会撑爆磁盘；
+- 控制台：只在有终端时挂（run-console.bat 有；pythonw / exe 双击没有），
+  所以平时既没有黑框也没有日志噪音；
+- urllib3 / requests / charset_normalizer / PIL / asyncio 压到 WARNING，避免噪音；
+- 未捕获异常：开着日志时记一条 CRITICAL；没开日志时也在崩溃这一刻把
+  traceback 追加进同一个文件（否则 pythonw 下闪退就什么都查不到），
+  正常运行期间不会写任何东西。
 """
 
 import logging
 import logging.handlers
 import os
 import sys
+import time
 import traceback
 
 _APP_DIR = "LyriCast"          # 用户目录下的文件夹名（与 APP_NAME 保持一致）
 _LOG_NAME = "lyricast.log"
 _SETUP_DONE = False
+_FILE_HANDLER = None
+_FMT = logging.Formatter(
+    "%(asctime)s %(levelname).1s %(name)s: %(message)s", "%m-%d %H:%M:%S")
+_NOISY = ("urllib3", "requests", "charset_normalizer", "PIL", "asyncio")
 
 
 def log_dir():
@@ -40,48 +49,68 @@ def log_path():
     return os.path.join(log_dir(), _LOG_NAME)
 
 
-def setup(level=logging.INFO, to_file=True):
-    """安装日志处理器；重复调用只生效一次。返回日志文件路径（可能为空）。"""
-    global _SETUP_DONE
+def file_log_enabled():
+    """文件日志开没开（托盘勾选状态用）。"""
+    return _FILE_HANDLER is not None
+
+
+def set_file_log(enabled):
+    """开关文件日志（随时可切）。返回当前日志文件路径（关了就为空串）。"""
+    global _FILE_HANDLER
     root = logging.getLogger()
-    if _SETUP_DONE:
-        return log_path()
-    _SETUP_DONE = True
-    root.setLevel(logging.DEBUG)
-
-    fmt = logging.Formatter(
-        "%(asctime)s %(levelname).1s %(name)s: %(message)s", "%m-%d %H:%M:%S")
-
-    path = ""
-    if to_file:
+    if enabled and _FILE_HANDLER is None:
         try:
             os.makedirs(log_dir(), exist_ok=True)
             fh = logging.handlers.RotatingFileHandler(
                 log_path(), maxBytes=1_000_000, backupCount=3,
                 encoding="utf-8")
-            fh.setFormatter(fmt)
-            fh.setLevel(logging.DEBUG)      # 文件里留全量，控制台只留 INFO
+            fh.setFormatter(_FMT)
+            fh.setLevel(logging.DEBUG)      # 文件里留全量
             root.addHandler(fh)
-            path = log_path()
+            _FILE_HANDLER = fh
+            logging.getLogger("lyricast").info("日志已开启（%s）", log_path())
         except Exception:
-            path = ""
+            _FILE_HANDLER = None
+    elif not enabled and _FILE_HANDLER is not None:
+        root.removeHandler(_FILE_HANDLER)
+        try:
+            _FILE_HANDLER.close()
+        except Exception:
+            pass
+        _FILE_HANDLER = None
+    return log_path() if _FILE_HANDLER is not None else ""
 
-    # 有控制台才挂 StreamHandler（run.bat 有；pythonw 双击没有）
+
+def setup(level=logging.INFO, to_file=False):
+    """安装日志处理器；重复调用只生效一次。返回日志文件路径（没开则为空）。
+
+    `to_file=True`（托盘里预先勾了「记录运行日志」）一开始就写文件；
+    否则只压第三方噪音 + 有终端时打控制台。
+    """
+    global _SETUP_DONE
+    root = logging.getLogger()
+    if _SETUP_DONE:
+        return log_path() if _FILE_HANDLER is not None else ""
+    _SETUP_DONE = True
+    root.setLevel(logging.DEBUG)
+
+    if to_file:
+        set_file_log(True)
+
+    # 有控制台才挂 StreamHandler（run-console.bat 有；pythonw 双击没有）
     if getattr(sys, "stderr", None) is not None:
         try:
             sh = logging.StreamHandler()
-            sh.setFormatter(fmt)
+            sh.setFormatter(_FMT)
             sh.setLevel(level)
             root.addHandler(sh)
         except Exception:
             pass
 
-    for noisy in ("urllib3", "requests", "PIL", "asyncio"):
+    for noisy in _NOISY:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
-    logging.getLogger("lyricast").info(
-        "日志已启动（文件：%s）", path or "未启用")
-    return path
+    return log_path() if _FILE_HANDLER is not None else ""
 
 
 def get_logger(name):
@@ -91,15 +120,28 @@ def get_logger(name):
     return logging.getLogger(name or "lyricast")
 
 
+def _write_crash(text):
+    """没开文件日志时的兜底：崩溃这一刻把 traceback 追加进日志文件。"""
+    try:
+        os.makedirs(log_dir(), exist_ok=True)
+        with open(log_path(), "a", encoding="utf-8") as fp:
+            fp.write(text)
+    except Exception:
+        pass
+
+
 def install_excepthook():
     """未捕获异常也写进日志（不然 pythonw 下闪退什么都没有）。"""
     prev = sys.excepthook
 
     def hook(exc_type, exc, tb):
         try:
-            logging.getLogger("lyricast").critical(
-                "未捕获异常:\n%s", "".join(
-                    traceback.format_exception(exc_type, exc, tb)))
+            detail = "".join(traceback.format_exception(exc_type, exc, tb))
+            if file_log_enabled():
+                logging.getLogger("lyricast").critical("未捕获异常:\n%s", detail)
+            else:
+                _write_crash("%s C lyricast: 未捕获异常:\n%s\n" % (
+                    time.strftime("%m-%d %H:%M:%S"), detail))
         except Exception:
             pass
         try:

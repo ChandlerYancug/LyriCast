@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""唱臂皮肤表：键齐全、全局选择正确（config 优先，未知值回退默认）、轮换走遍全部。
+"""唱臂（tonearm.py）：唯一的这支臂键齐全、能画出来（不再有换肤逻辑）。
 
 跑法（项目根目录）：
     python tests/test_tonearm.py
@@ -13,51 +13,46 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tonearm  # noqa: E402
 
+_APP = None
+
+
+def _ensure_app():
+    """保持 QApplication 的全局引用（只写表达式会被垃圾回收）。"""
+    global _APP
+    from PyQt6.QtWidgets import QApplication
+
+    _APP = QApplication.instance() or QApplication([])
+    return _APP
+
 _REQUIRED = ("id", "name", "desc", "shape", "tube_edge", "tube_body",
              "tube_gloss", "tube_spec", "shell_col", "cart", "accent",
              "cw_col", "pivot_col")
 
 
-def test_skins_have_required_keys():
-    assert len(tonearm.SKINS) >= 5
-    ids = set()
-    for s in tonearm.SKINS:
-        for key in _REQUIRED:
-            assert key in s, (s.get("id"), key)
-        assert s["shape"] in ("s", "j", "straight"), s["shape"]
-        assert s["id"] not in ids, "皮肤 id 重复：%s" % s["id"]
-        ids.add(s["id"])
-    assert tonearm.DEFAULT_ID in ids
+def test_skin_has_required_keys():
+    s = tonearm.SKIN
+    for key in _REQUIRED:
+        assert key in s, key
+    assert s["shape"] in ("s", "j", "straight"), s["shape"]
 
 
-def test_pick_prefers_config_then_default():
-    assert tonearm.pick({})["id"] == tonearm.DEFAULT_ID
-    want = tonearm.SKINS[-1]["id"]
-    assert tonearm.pick({"tonearm_skin": want})["id"] == want
-    # 未知值回退默认（不再按歌随机换）
-    assert tonearm.pick({"tonearm_skin": "no-such"})["id"] == tonearm.DEFAULT_ID
+def test_draw_smoke():
+    """不弹窗把唱臂画到 QImage 上：出错了这里就会炸。"""
+    _ensure_app()
+    from PyQt6.QtGui import QImage, QPainter
 
-
-def test_by_id_lookup():
-    assert tonearm.by_id(tonearm.DEFAULT_ID)["name"]
-    assert tonearm.by_id("nope") is None
-    assert tonearm.by_id(None) is None
-
-
-def test_next_of_cycles_everything():
-    skin = tonearm.SKINS[0]
-    seen = set()
-    for _ in range(len(tonearm.SKINS)):
-        skin = tonearm.next_of(skin)
-        seen.add(skin["id"])
-    assert len(seen) == len(tonearm.SKINS)
+    img = QImage(640, 480, QImage.Format.Format_ARGB32)
+    img.fill(0)
+    p = QPainter(img)
+    tonearm.draw_static(p, 480.0, 120.0, 120.0)
+    tonearm.draw(p, 120.0, 300.0)
+    p.end()
+    assert not img.isNull()
 
 
 TESTS = (
-    test_skins_have_required_keys,
-    test_pick_prefers_config_then_default,
-    test_by_id_lookup,
-    test_next_of_cycles_everything,
+    test_skin_has_required_keys,
+    test_draw_smoke,
 )
 
 

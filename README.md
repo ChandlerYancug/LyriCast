@@ -76,7 +76,8 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 | 路由器隔离 | 访客网络、AP 隔离、2.4G / 5G 分成两个 SSID 且设备不在同一网段，都会互相看不见（Sonos App 能控制不代表电脑能发现） |
 | **直接给 IP（万能）** | 托盘菜单 →「手动输入音箱 IP…」，完全绕过搜索。Sonos 的 IP：Sonos App → 设置 → 系统 → 关于我的系统 |
 
-> 还不行？托盘菜单 →「打开日志文件夹」，把 `lyricast.log` 和音箱型号一起发到
+> 还不行？托盘菜单 → 勾「记录运行日志（排查用）」复现一次，再用
+> 「打开日志文件夹」把 `lyricast.log` 和音箱型号一起发到
 > [Issues](https://github.com/ChandlerYancug/LyriCast/issues)。
 
 ## 依赖
@@ -143,7 +144,7 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
   `.shadow` 做法（封面自身模糊一份、下移、略缩小、压暗当投影），唱片像浮在桌面上；
   模糊图只算一次，换封面才重算
 - **彩胶材质（16 种）**：唱片不是永远黑胶 —— 每种材质除了底色，**透明感 / 花纹 /
-  沟槽表现 / 光泽**都不一样，不是只换颜色（切换同唱臂：托盘菜单 / `M` 键）：
+  沟槽表现 / 光泽**都不一样，不是只换颜色（托盘菜单「换一张彩胶」/ `M` 键）：
 
   | id | 材质 | 质感 |
   | --- | --- | --- |
@@ -162,22 +163,12 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
   | `split` | 对开双色胶（红/蓝对半） | 两半硬分色，接缝有渗色 |
   | `smoke` | 烟熏胶 | 半透灰底 + 烟雾状色块 |
 
-  想固定一款就用 `config.json` 里的 `vinyl_material`（填上面的 id，`"auto"` 为随机）。
-- **唱臂皮肤（6 支，好看优先）**：锥形管身（枢轴粗、唱头端细）+ 金属质感 +
-  抛光唱头架 + 钻石针尖光晕；托盘菜单「换一支唱臂」或播放器里按 `N` 轮换：
-
-  | id | 名字 | 观感 |
-  | --- | --- | --- |
-  | `carbon` | 碳纤维 | 近黑碳管 + 冷色高光 + 银唱头架（宝碟风），默认 |
-  | `champagne` | 香槟金 | 暖金管身 + 奶油色唱头架 |
-  | `mirror` | 镜面铬 · S 形 | S 形镜面铬管，反光一路拉通，复古优雅 |
-  | `midnight` | 午夜蓝 | 深蓝金属管 + 蓝唱头 |
-  | `ivory` | 象牙白 · 玫瑰金 | 奶白管身 + 玫瑰金配件 |
-  | `walnut` | 胡桃木 · 黄铜 | 漆面木纹管 + 黄铜配件 |
-
-  想加自己的配色，照 `tonearm.py` 的模板加一条即可。
-- **皮肤会“记住”你的选择**：切歌**不会**自动乱换 —— 没记过的歌用你上一次挑的
-  那款；你在某首歌里换过（`M` / `N` / 托盘菜单），这首歌就被记住，下次再放
+  想固定一款就用 `config.json` 里的 `vinyl_material`（填上面的 id；`"auto"` / 未填＝默认 `black` 经典黑胶）。
+- **唱臂**：固定一支朴素耐看的直臂 —— 近黑碳管 + 冷色高光 + 银唱头架，锥形管身
+  （枢轴粗、唱头端细）、带偏角的唱头 / 钻石针尖光晕、滚花配重、轴承座与信号线，
+  暂停时向外轻抬；不再提供换肤（选项多了反而杂乱）。
+- **彩胶会“记住”你的选择**：切歌**不会**自动乱换 —— 没记过的歌用你上一次挑的
+  那款；你在某首歌里换过（`M` / 托盘菜单），这首歌就被记住，下次再放
   这首歌自动恢复你当时的选择（存在 `config.json` 的 `song_skins`，最多 500 首）。
 - **翻译“四周汇聚”入场（只在当前行）**：每个字从各自方向（确定性伪随机，稳定不跳）
   的偏移处**由虚到实**浮入到最终位置，并带几层幽灵描边做方向柔化 —— 行内时间驱动，
@@ -229,7 +220,6 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 | `↑` `↓` | 音量 ±2 |
 | `[` `]` | 歌词偏移 −0.05s / +0.05s（画面下方实时显示当前值） |
 | `M` | 换一种彩胶材质（画面下方显示材质名） |
-| `N` | 换一支唱臂皮肤（画面下方显示名字） |
 | `F11` | 窗口 / 全屏 切换 |
 | `Esc` | 全屏时退回窗口；窗口时隐藏到托盘 |
 
@@ -312,8 +302,9 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 - **默认打开的是「黑胶播放器」窗口**：有标题栏、可缩放、可最小化，
   跟普通程序一样；想全屏随时切（双击画面 / `F11` / 右键菜单）
 - 想开机自动运行：托盘图标右键 → 勾上 **开机自启**
-- 想看实时日志：双击 `run-console.bat`（带控制台）；
-  平时也可用托盘菜单「查看运行日志（记事本）」/「打开日志文件夹」
+- 想看实时日志：双击 `run-console.bat`（带控制台）
+- **运行日志默认不写**（保持简洁）：需要排查问题时，托盘菜单勾上
+  「记录运行日志（排查用）」，再用「查看运行日志（记事本）」/「打开日志文件夹」
 
 如果想改回“启动只开悬浮小条”，把 `config.json` 里的 `start_view` 改成 `"bar"` 即可；
 希望一启动就全屏，就把 `player_fullscreen` 改成 `true`。
@@ -341,8 +332,8 @@ LyriCast 用 SSDP 组播「喊一嗓子」找设备（和 Sonos App、Windows �
 | `lyrics_offset_sec` | 全局歌词偏移（秒），正数=歌词延后 |
 | `vinyl_turn_seconds` | 唱片转一圈的秒数（默认 12） |
 | `vinyl_material` | 当前彩胶材质（`auto` / 未填＝默认 `black` 经典黑胶；可填上面彩胶表的 id） |
-| `tonearm_skin` | 当前唱臂皮肤（`auto` / 未填＝默认 `carbon` 碳纤维；可填上面唱臂表的 id） |
-| `song_skins` | 每首歌记住的皮肤（自动维护，不用手改；最多 500 首） |
+| `song_skins` | 每首歌记住的彩胶（自动维护，不用手改；最多 500 首） |
+| `log_to_file` | 是否记录运行日志（默认 `false`；也可在托盘菜单里勾「记录运行日志」） |
 | `start_view` | `player`＝启动开黑胶播放器（默认）；`bar`＝只开悬浮歌词条 |
 | `player_fullscreen` | 播放器是否以全屏启动（默认 `false`＝窗口） |
 | `player_size` / `player_pos` | 播放器窗口尺寸与位置，自动记录 |
@@ -497,8 +488,10 @@ Sonos 多房间或立体声配对时，**从机（slave）的接口不报告曲�
   SF Pro（版权字体）、`dev/` 的输出文件。
 - 隐私：所有数据都在本机（局域网内音箱 + 歌词源 API + 本地缓存），
   没有遥测、不上传任何东西；Apple 凭证只用于向 Apple Music 请求歌词。
-- 日志：滚动写在用户目录（Windows `%LOCALAPPDATA%\LyriCast\logs\`，其它平台
-  `~/.lyricast/logs/`），托盘菜单里有“打开日志文件夹”；提 issue 时附上它。
+- 日志：**默认不写**（保持简洁）；托盘菜单勾「记录运行日志（排查用）」才开，
+  滚动写在用户目录（Windows `%LOCALAPPDATA%\LyriCast\logs\`，其它平台
+  `~/.lyricast/logs/`，单文件 1 MB × 3 份）；提 issue 时附上它。
+  平时运行完全无文件产生（未捕获异常时会写一条崩溃记录，便于排查）。
 - 歌词来自 Apple Music（非官方接口）/ 网易云（非官方接口）/ LRCLIB（开放 API），
   仅供个人本地显示，请遵守各源的条款。
 
@@ -541,7 +534,7 @@ LyriCast/
 ├── speakers/      音箱后端（可扩展，见 docs/BACKENDS.md）
 │   ├── base.py       后端接口：NowPlaying + 能力位（读/控/订阅）
 │   ├── http.py       HTTP / SOAP / XML 公共工具（UA、超时口径统一）
-│   ├── log.py        日志（滚动文件 + 控制台 + 未捕获异常）
+│   ├── log.py        日志（默认安静，托盘里可开文件日志 + 未捕获异常）
 │   ├── discovery.py  SSDP 发现（Sonos 和通用 DLNA 一起问）
 │   ├── sonos.py      Sonos 后端（含多房间协调器）
 │   ├── upnp.py       通用 DLNA / UPnP-AV 后端
@@ -554,8 +547,8 @@ LyriCast/
 ├── cache.py       歌词 / 封面磁盘缓存
 ├── overlay.py     悬浮歌词窗（自绘 + 60fps 动画）
 ├── fullscreen.py  全屏歌词模式（旋转黑胶 + 模糊封面背景）
-├── tonearm.py     唱臂皮肤（6 支，见「唱臂皮肤」表）
-├── skins.py       每首歌的皮肤记忆（彩胶 / 唱臂，存 config.json）
+├── tonearm.py     唱臂（固定一支朴素直臂，不再换肤）
+├── skins.py       每首歌的彩胶记忆（存 config.json）
 ├── config.example.json  配置模板（真配置 config.json 不进仓库）
 ├── am_token.txt   Apple Music 凭证（自己可见，别外传；不进仓库）
 ├── get_apple_token.py   一键刷新 Apple 凭证（写 am_token.txt）
@@ -575,7 +568,6 @@ LyriCast/
     ├── make_shots.py      生成 docs/images/（截图 + 演示动图）
     ├── build_exe.py       打包 Windows 免安装版（PyInstaller）
     ├── preview_materials.py  彩胶材质对比图（dev/materials_preview.png）
-    ├── preview_tonearms.py   唱臂皮肤对比图（dev/tonearms_preview.png）
     ├── _preview.py        渲染效果预览图（输出到根目录 preview_lyrics_style.png）
     ├── _transwrap_check.py 翻译动画/折行/裁切的渲染回归检查
     ├── debug_speaker.py   诊断：导出音箱原始返回（debug.bat 双击跑）

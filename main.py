@@ -104,8 +104,8 @@ DEFAULTS = {
     "lyrics_offset_sec": 0.0,
     "vinyl_turn_seconds": 12.0,
     "vinyl_material": "auto",      # 用户上次挑的彩胶（auto=默认经典黑胶；见 vinyl.py）
-    "tonearm_skin": "auto",       # 用户上次挑的唱臂（auto=默认碳纤维；见 tonearm.py）
-    "song_skins": {},              # 每首歌的皮肤记忆（见 skins.py，自动维护）
+    "song_skins": {},              # 每首歌的彩胶记忆（见 skins.py，自动维护）
+    "log_to_file": False,            # 记录运行日志（排查用；托盘里勾，默认关）
     "media_keys": True,
     "volume_keys_speaker": True,     # 键盘音量键接管来调音箱（否则调系统音量）
     "start_view": "player",          # player = 开黑胶播放器；bar = 只开悬浮歌词条
@@ -592,7 +592,6 @@ class LyriCastApp(QObject):
         menu.addAction("黑胶转速 慢一点", lambda: self._nudge_vinyl(+3.0))
         menu.addAction("黑胶转速 快一点", lambda: self._nudge_vinyl(-3.0))
         menu.addAction("换一张彩胶", self._cycle_vinyl)
-        menu.addAction("换一支唱臂", self._cycle_tonearm)
         menu.addSeparator()
         mk = menu.addAction("多媒体键控制音箱（全局）")
         mk.setCheckable(True)
@@ -608,6 +607,10 @@ class LyriCastApp(QObject):
         auto.setChecked(os.path.exists(self._autostart_path()))
         auto.triggered.connect(self._toggle_autostart)
         menu.addSeparator()
+        lg = menu.addAction("记录运行日志（排查用）")
+        lg.setCheckable(True)
+        lg.setChecked(speakers.file_log_enabled())
+        lg.triggered.connect(self._toggle_file_log)
         menu.addAction("打开日志文件夹", self._open_logs)
         menu.addAction("查看运行日志（记事本）", self._open_log_file)
         menu.addSeparator()
@@ -850,9 +853,23 @@ class LyriCastApp(QObject):
         self.log.info("Apple 凭证已保存，重新抓歌词")
         self.relyrics()
 
+    def _toggle_file_log(self, checked):
+        """托盘菜单：开启 / 关闭运行日志（排查问题时用）。"""
+        self.cfg["log_to_file"] = bool(checked)
+        save_config(self.cfg)
+        path = speakers.set_file_log(bool(checked))
+        self.log.info("运行日志：%s", "开启" if checked else "关闭")
+        self.overlay.set_status(
+            "已开启运行日志：\n%s" % (path or speakers.log_path())
+            if checked else "已关闭运行日志")
+
     def _open_log_file(self):
         """托盘菜单：直接打开最新日志（Windows 用记事本；别处用默认程序）。"""
         path = speakers.log_path()
+        if not os.path.exists(path):
+            self.overlay.set_status(
+                "还没有日志文件 ——\n先在托盘里勾选「记录运行日志（排查用）」")
+            return
         try:
             import subprocess
             if sys.platform == "win32":
@@ -1102,13 +1119,6 @@ class LyriCastApp(QObject):
         if not self.fullscreen.isVisible():
             self._show_player()
         self.fullscreen.cycle_material()
-        save_config(self.cfg)
-
-    def _cycle_tonearm(self):
-        """换一支唱臂：写进配置 + 记住这首歌（下次放这首还是它）。"""
-        if not self.fullscreen.isVisible():
-            self._show_player()
-        self.fullscreen.cycle_tonearm()
         save_config(self.cfg)
 
     # ---- 全局多媒体键（仅 Windows） ------------------------------------- #
@@ -1375,7 +1385,8 @@ def main():
                 "ChandlerYancug.LyriCast")
         except Exception:
             pass
-    speakers.setup()                      # 日志：文件 + 控制台（有终端时）
+    # 日志默认安静（不写文件）；托盘里勾过「记录运行日志」才一开始就写
+    speakers.setup(to_file=bool(load_config().get("log_to_file", False)))
     speakers.install_excepthook()
     log = speakers.get_logger("main")
     log.info("%s %s 启动（Python %s）", speakers.APP_NAME,

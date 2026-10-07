@@ -30,7 +30,15 @@ from .http import (  # noqa: F401
     fmt_clock,
     parse_clock,
 )
-from .log import get_logger, install_excepthook, log_dir, log_path, setup  # noqa: F401
+from .log import (  # noqa: F401
+    file_log_enabled,
+    get_logger,
+    install_excepthook,
+    log_dir,
+    log_path,
+    set_file_log,
+    setup,
+)
 
 __all__ = [
     "discover", "open_backend", "backend_kinds", "fetch_album_art",
@@ -38,6 +46,7 @@ __all__ = [
     "CAN_CONTROL", "CAN_SEEK", "CAN_VOLUME", "CAN_EVENTS", "CAN_COORDINATOR",
     "APP_NAME", "APP_VERSION", "UA",
     "setup", "get_logger", "log_dir", "log_path", "install_excepthook",
+    "set_file_log", "file_log_enabled",
 ]
 
 # kind -> (模块名, 类名)；懒加载，某个后端缺依赖不影响其它后端

@@ -1,18 +1,10 @@
 # -*- coding: utf-8 -*-
-"""黑胶唱臂皮肤：6 支“好看优先”的造型（不追名器，追质感）。
+"""黑胶唱臂：一支朴素好看的近黑直臂（不再提供换肤，越简单越耐看）。
 
-- **形状**：直臂 / S 形臂（优雅的双弯）；管身是「暗边 → 主体 → 亮面 → 高光」
-  四层描边，弯管上也有圆柱感；
-- **材质**：碳纤维（宝碟风：近黑管 + 冷色高光 + 银唱头架）、香槟金、
-  镜面铬、午夜蓝、象牙白 + 玫瑰金、胡桃木 + 黄铜；
-- **细节**：加大的唱头架（顶面高光 + 两颗螺丝）、带光晕的钻石针尖、
-  滚花配重、带高光点的轴承座、甩出的信号线。
-
-选择规则（和彩胶一致，见 `skins.py`）：
-
-- 用户为某首歌挑过 → **记住这首歌的选择**，下次放这首歌还是它；
-- 没挑过 → 用全局当前选择（`config.json` 的 `tonearm_skin`）；
-- 都是 `auto` → 默认 `carbon`（碳纤维）。
+- 造型：直臂 + 锥形管身（枢轴粗、唱头端细）；管身是「暗边 → 主体 → 亮面 →
+  高光」四层描边，像真的金属管；
+- 细节：唱头架、带偏角的唱头 / 钻石针尖（一圈柔光）、滚花配重、
+  带高光点的轴承座、甩出的信号线。
 
 绘制入口 `draw()`：坐标已由调用方 translate/rotate 到
 「枢轴 = 原点、+x 指向唱针」的局部坐标系里。
@@ -30,95 +22,19 @@ from PyQt6.QtGui import (
 
 
 # --------------------------------------------------------------------------- #
-# 皮肤表
+# 唱臂外观（唯一一支：近黑管 + 冷色高光 + 银唱头架，干净朴素）
 # --------------------------------------------------------------------------- #
-SKINS = [
-    {
-        "id": "carbon", "name": "碳纤维",
-        "desc": "近黑碳管 + 冷色高光 + 银唱头架（宝碟风），默认款",
-        "shape": "straight", "bend": 0.0,
-        "tube_edge": "#0a0b0d", "tube_body": "#191b1f",
-        "tube_gloss": "#46525f", "tube_spec": "#dfe6ee",
-        "shell_col": ("#eaeef3", "#aeb5be", "#4b5158"),
-        "cart": ("#2a2d32", "#0e1012"), "accent": "#d8dde3",
-        "cw_col": ("#4b5058", "#23262b", "#0d0e10"),
-        "pivot_col": ("#eef1f5", "#8b929b", "#2f3339"),
-    },
-    {
-        "id": "champagne", "name": "香槟金",
-        "desc": "暖金管身 + 奶油色唱头架，灯光下最贵气的一支",
-        "shape": "straight", "bend": 0.0,
-        "tube_edge": "#7a5f2c", "tube_body": "#cfa95f",
-        "tube_gloss": "#f4e3b4", "tube_spec": "#fff8e3",
-        "shell_col": ("#f6ecd8", "#d9c08a", "#8a6a33"),
-        "cart": ("#f2e8d2", "#cbb37f"), "accent": "#f4e3b4",
-        "cw_col": ("#e8cf95", "#b49251", "#6a5222"),
-        "pivot_col": ("#f6e6c2", "#c9a75f", "#77602f"),
-    },
-    {
-        "id": "mirror", "name": "镜面铬 · S 形",
-        "desc": "S 形镜面铬管，反光一路拉通，复古优雅",
-        "shape": "s", "bend": 0.048,
-        "tube_edge": "#2a2e34", "tube_body": "#c9d0d9",
-        "tube_gloss": "#f8fbfe", "tube_spec": "#ffffff",
-        "shell_col": ("#eef1f5", "#a9b0b9", "#484e55"),
-        "cart": ("#dfe4ea", "#8a9199"), "accent": "#eef1f5",
-        "cw_col": ("#eef2f7", "#8d939c", "#31353b"),
-        "pivot_col": ("#eef2f7", "#8d939c", "#31353b"),
-    },
-    {
-        "id": "midnight", "name": "午夜蓝",
-        "desc": "深蓝金属管 + 蓝唱头，冷调夜色的感觉",
-        "shape": "straight", "bend": 0.0,
-        "tube_edge": "#0a1022", "tube_body": "#1d2b4f",
-        "tube_gloss": "#4d6fae", "tube_spec": "#c3d4f4",
-        "shell_col": ("#dfe6f2", "#93a3c0", "#3c4a68"),
-        "cart": ("#2f4b8f", "#16264f"), "accent": "#c3d4f4",
-        "cw_col": ("#3c4a6e", "#1a2340", "#0a0e1d"),
-        "pivot_col": ("#dfe6f2", "#7f8ba6", "#2b3348"),
-    },
-    {
-        "id": "ivory", "name": "象牙白 · 玫瑰金",
-        "desc": "奶白管身 + 玫瑰金配件，干净的高级感",
-        "shape": "straight", "bend": 0.0,
-        "tube_edge": "#b9b0a2", "tube_body": "#f0e9dc",
-        "tube_gloss": "#ffffff", "tube_spec": "#fffdf7",
-        "shell_col": ("#fbf7f0", "#ddd2c0", "#a2967f"),
-        "cart": ("#f6efe2", "#d3c6ad"), "accent": "#d8a48f",
-        "cw_col": ("#f6f0e4", "#cbbfae", "#8d8270"),
-        "pivot_col": ("#f0c9b6", "#c98d72", "#8a5540"),
-    },
-    {
-        "id": "walnut", "name": "胡桃木 · 黄铜",
-        "desc": "漆面木纹管 + 黄铜配件，发烧友的小情调",
-        "shape": "straight", "bend": 0.0,
-        "tube_edge": "#33200f", "tube_body": "#6f4522",
-        "tube_gloss": "#a8763f", "tube_spec": "#e3bd8a",
-        "shell_col": ("#e8cd9a", "#c39a55", "#7d5c26"),
-        "cart": ("#f0e6cf", "#c9b184"), "accent": "#e3bd8a",
-        "cw_col": ("#e2c58c", "#b08a48", "#6b5222"),
-        "pivot_col": ("#e8cd9a", "#b9924c", "#6f5423"),
-    },
-]
-
-BY_ID = {s["id"]: s for s in SKINS}
-DEFAULT_ID = "carbon"
-
-
-def by_id(skin_id):
-    """按 id 取皮肤；没有就返回 None。"""
-    return BY_ID.get(str(skin_id or ""))
-
-
-def pick(cfg):
-    """全局选择：config 里固定过的就用它，否则默认碳纤维。"""
-    return by_id((cfg or {}).get("tonearm_skin")) or BY_ID[DEFAULT_ID]
-
-
-def next_of(skin):
-    """换下一支（托盘 / `N` 键）。"""
-    i = SKINS.index(skin) if skin in SKINS else 0
-    return SKINS[(i + 1) % len(SKINS)]
+SKIN = {
+    "id": "carbon", "name": "碳纤维",
+    "desc": "近黑碳管 + 冷色高光 + 银唱头架，干净朴素",
+    "shape": "straight", "bend": 0.0,
+    "tube_edge": "#0a0b0d", "tube_body": "#191b1f",
+    "tube_gloss": "#46525f", "tube_spec": "#dfe6ee",
+    "shell_col": ("#eaeef3", "#aeb5be", "#4b5158"),
+    "cart": ("#2a2d32", "#0e1012"), "accent": "#d8dde3",
+    "cw_col": ("#4b5058", "#23262b", "#0d0e10"),
+    "pivot_col": ("#eef1f5", "#8b929b", "#2f3339"),
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -174,7 +90,7 @@ def _tube_path(L, shape, bend):
 # --------------------------------------------------------------------------- #
 # 静态部分（不随唱臂转动）：信号线
 # --------------------------------------------------------------------------- #
-def draw_static(p, px, py, R, skin):
+def draw_static(p, px, py, R):
     """枢轴处伸出的信号线：一小段弧线拐向右上，末端淡出。"""
     p.save()
     p.translate(px, py)
@@ -197,7 +113,8 @@ def draw_static(p, px, py, R, skin):
 # --------------------------------------------------------------------------- #
 # 主绘制：枢轴 = 原点，+x 指向唱针
 # --------------------------------------------------------------------------- #
-def draw(p, R, L, skin):
+def draw(p, R, L, skin=None):
+    skin = skin or SKIN
     w0, w1 = R * 0.037, R * 0.026        # 锥管：枢轴粗 → 唱头端细
     wm = (w0 + w1) / 2.0
     path = _tube_path(L, skin.get("shape", "straight"),

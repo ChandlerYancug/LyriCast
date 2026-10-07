@@ -345,6 +345,9 @@ class FullscreenView(QWidget):
         self._segs_cache = []
         self._runs_cache = []       # 每行按逐词时间切好的运行段（上浮用）
         self._elapsed = 0.0         # 当前行行内已过时间（逐词上浮用）
+        self._lyrics_ver = 0        # 歌词内容的版本号（换歌/换词时 +1）
+        self._layout_ver = -1       # 布局是按哪个版本算的（只比行数会漏：
+                                    # 两首歌行数相同但内容不同）
         self._row_h = 0.0
         self._base_pt = 32.0
         self._spacing = 40.0
@@ -367,7 +370,6 @@ class FullscreenView(QWidget):
         self._art_prev = None
         self._vinyl_fade_ts = 0.0
         self._vinyl_mat = vinyl.pick(cfg)        # 彩胶：全局选择（默认经典黑胶）
-        self._arm_skin = tonearm.pick(cfg)       # 唱臂：全局选择（默认碳纤维）
         self._shadow_pm = None      # 封面色彩的柔影（YesPlayMusic 的 .shadow 做法）
         self._shadow_key = None
         self._arm_off = 0.0         # 唱臂抬起角（暂停时向外摆）
@@ -455,8 +457,6 @@ class FullscreenView(QWidget):
             self._nudge_offset(+0.05)
         elif key == Qt.Key.Key_M:                # M ：换一种彩胶材质
             self.cycle_material()
-        elif key == Qt.Key.Key_N:                # N ：换一支唱臂皮肤
-            self.cycle_tonearm()
         else:
             super().keyPressEvent(event)
 
@@ -472,15 +472,6 @@ class FullscreenView(QWidget):
         skins.remember(self.cfg, self._skin_key(),
                        vinyl=self._vinyl_mat["id"])
         self._toast_text = "唱片材质：%s" % self._vinyl_mat["name"]
-        self._toast_until = time.monotonic() + 1.4
-        self.update()
-
-    def cycle_tonearm(self):
-        """换一支唱臂：写进配置（全局）+ 记住这首歌（`N` 键 / 托盘菜单）。"""
-        self._arm_skin = tonearm.next_of(self._arm_skin)
-        self.cfg["tonearm_skin"] = self._arm_skin["id"]
-        skins.remember(self.cfg, self._skin_key(), arm=self._arm_skin["id"])
-        self._toast_text = "唱臂：%s" % self._arm_skin["name"]
         self._toast_until = time.monotonic() + 1.4
         self.update()
 
@@ -509,16 +500,16 @@ class FullscreenView(QWidget):
         self._vinyl_swap()
         self.title = info.get("title", "") or ""
         self.artist = info.get("artist", "") or ""
-        # 皮肤：先用这首歌记住的选择（用户当时挑的）；没记过就用全局选择 ——
+        # 彩胶：先用这首歌记住的选择（用户当时挑的）；没记过就用全局选择 ——
         # 切歌不会自动乱换，一直保持用户上一次的选择
         memo = skins.recall(self.cfg, self._skin_key())
         mat = vinyl.by_id(memo.get("vinyl")) or vinyl.pick(self.cfg)
         if mat["id"] != self._vinyl_mat["id"]:
             self._vinyl_mat = mat
             self._plate_key = None              # 换材质 → 盘体重画
-        self._arm_skin = tonearm.by_id(memo.get("arm")) or tonearm.pick(self.cfg)
         self.duration = float(info.get("duration") or 0.0)
         self.status_text = ""           # 搜索期间留白，不再闪“正在搜索歌词…”
+        self._lyrics_ver += 1           # 新歌：布局缓存作废
         self._lines, self._times, self._plain = [], [], []
         self._ends = []
         self._rel_words = []
@@ -1204,6 +1195,7 @@ class FullscreenView(QWidget):
         if (abs(base_pt - self._base_pt) < 0.05
                 and abs(area_w - self._layout_w) < 2.0
                 and abs(dpr - self._dpr) < 0.01
+                and self._layout_ver == self._lyrics_ver
                 and len(self._segs_cache) == len(self._lines)):
             return
         if abs(dpr - self._dpr) >= 0.01:
@@ -1211,6 +1203,7 @@ class FullscreenView(QWidget):
             self._blur_cache.clear()
         self._base_pt = base_pt
         self._layout_w = area_w
+        self._layout_ver = self._lyrics_ver
 
         row_h = QFontMetricsF(self._font(base_pt)).height()
         self._row_h = row_h
@@ -1527,7 +1520,7 @@ class FullscreenView(QWidget):
         return self._plate_pm
 
     def _draw_tonearm(self, p, cx, cy, R):
-        """唱臂：几何（枢轴/落点/抬臂）在这里算，样子交给 tonearm.py 的皮肤。
+        """唱臂：几何（枢轴/落点/抬臂）在这里算，样子交给 tonearm.py。
 
         唱臂从盘外右上斜进沟槽区，唱针落在 VINYL_ARM_HIT（≈0.8R，
         外圈音轨）；暂停时向外轻抬 VINYL_ARM_LIFT 度，像抬臂待机。
@@ -1541,11 +1534,11 @@ class FullscreenView(QWidget):
         dx, dy = cx + R * hx - px, cy + R * hy - py
         L = math.hypot(dx, dy)
         ang = math.degrees(math.atan2(dy, dx))
-        tonearm.draw_static(p, px, py, R, self._arm_skin)   # 信号线（不随臂转）
+        tonearm.draw_static(p, px, py, R)           # 信号线（不随臂转）
         p.save()
         p.translate(px, py)
         p.rotate(ang + self._arm_off)
-        tonearm.draw(p, R, L, self._arm_skin)
+        tonearm.draw(p, R, L)
         p.restore()
 
     def _draw_header(self, p, area):
