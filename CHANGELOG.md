@@ -4,6 +4,14 @@
 [Releases](https://github.com/ChandlerYancug/LyriCast/releases) 页与此同步。
 两个通道：正式版（数字版本号）与 **调试版**（tag 带 `debug`，发布为 pre-release，不覆盖正式版）。
 
+## v0.4.1-debug（2026-10-07 · 调试版 / pre-release）
+
+- **修：点桌面快捷方式会先闪一个命令行黑框** —— Python 3.13.0 的 venv 自带一个
+  转发器 `pythonw.exe`，它会去启动控制台版解释器，于是 cmd / Windows Terminal
+  窗口先弹出来。`run.bat` 现在会在启动前自动把它换成基座解释器的正式副本
+  （venv 依然生效，已实测无黑框）；已有的 venv 不需要重建，下次启动自动修复。
+  exe 版不走 venv，不受此问题影响。
+
 ## v0.4.0-debug（2026-10-07 · 调试版 / pre-release）
 
 - **修：部分歌（OST / 专辑类）歌词一打开全是「作词 / 作曲 / 编曲…」** ——

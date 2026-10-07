@@ -62,7 +62,26 @@ exit /b 1
 
 :run
 if /i "%~1"=="console" goto run_console
+call :fix_pythonw
 start "" "%VENV%\Scripts\pythonw.exe" main.py
+exit /b 0
+
+rem ---- Python 3.13.0 venv quirk ----
+rem Scripts\pythonw.exe is a launcher that starts the console python.exe,
+rem so a console window (cmd / Windows Terminal) flashes before the app.
+rem Replace it with a plain copy of the base pythonw.exe - a real GUI exe;
+rem the venv still applies because pyvenv.cfg sits next to it (sys.prefix ok).
+rem Safe to run every time: no-op when the file already matches.
+:fix_pythonw
+set "PYHOME="
+for /f "usebackq tokens=1,* delims== " %%A in (`findstr /b /c:"home" "%VENV%\pyvenv.cfg" 2^>nul`) do if not defined PYHOME set "PYHOME=%%B"
+if not defined PYHOME exit /b 0
+set "BASEPW=%PYHOME%\pythonw.exe"
+if not exist "%BASEPW%" exit /b 0
+for %%F in ("%BASEPW%") do if %%~zF LSS 1024 exit /b 0
+fc /b "%BASEPW%" "%VENV%\Scripts\pythonw.exe" >nul 2>nul
+if not errorlevel 1 exit /b 0
+copy /Y "%BASEPW%" "%VENV%\Scripts\pythonw.exe" >nul 2>nul
 exit /b 0
 
 :run_console

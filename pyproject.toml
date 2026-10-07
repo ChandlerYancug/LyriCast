@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lyricast"
-version = "0.4.0"
+version = "0.4.1"
 description = "任何局域网音箱的桌面悬浮歌词条与黑胶播放器 (desktop lyrics bar & vinyl player for any LAN speaker)"
 readme = "README.md"
 license = { text = "MIT" }
