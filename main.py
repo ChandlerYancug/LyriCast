@@ -103,8 +103,7 @@ DEFAULTS = {
     "bg_album_art": True,
     "lyrics_offset_sec": 0.0,
     "vinyl_turn_seconds": 12.0,
-    "vinyl_material": "auto",      # 用户上次挑的彩胶（auto=默认经典黑胶；见 vinyl.py）
-    "song_skins": {},              # 每首歌的彩胶记忆（见 skins.py，自动维护）
+    "song_skins": {},              # 每首歌的彩胶记忆（自动配的 / 手动的；见 skins.py）
     "log_to_file": False,            # 记录运行日志（排查用；托盘里勾，默认关）
     "media_keys": True,
     "volume_keys_speaker": True,     # 键盘音量键接管来调音箱（否则调系统音量）

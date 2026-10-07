@@ -28,7 +28,6 @@ for n in sorted(os.listdir(os.path.join(BASE, "fonts"))):
 with open(os.path.join(BASE, "config.json"), "r", encoding="utf-8") as f:
     cfg = dict(json.load(f))
 
-cfg["vinyl_material"] = "auto"
 res, tgt = None, 0
 for fn in sorted(glob.glob(os.path.join(BASE, "cache", "lyrics", "*.json"))):
     try:

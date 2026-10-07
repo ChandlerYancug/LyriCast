@@ -370,6 +370,7 @@ class FullscreenView(QWidget):
         self._art_prev = None
         self._vinyl_fade_ts = 0.0
         self._vinyl_mat = vinyl.pick(cfg)        # 彩胶：全局选择（默认经典黑胶）
+        self._vinyl_auto = True     # 本首还没定彩胶 → 封面到了按主色自动配
         self._shadow_pm = None      # 封面色彩的柔影（YesPlayMusic 的 .shadow 做法）
         self._shadow_key = None
         self._arm_off = 0.0         # 唱臂抬起角（暂停时向外摆）
@@ -464,11 +465,14 @@ class FullscreenView(QWidget):
     # 数据入口
     # ------------------------------------------------------------------ #
     def cycle_material(self):
-        """换一种彩胶：写进配置（全局）+ 记住这首歌（`M` 键 / 托盘菜单）。"""
+        """换一种彩胶：只记进这首歌的记忆（`M` 键 / 托盘菜单）。
+
+        不再改全局配置 —— 全局保持 `auto` 时，没挑过的歌继续按封面主色自动配。
+        """
         self._vinyl_swap()
         self._vinyl_mat = vinyl.next_of(self._vinyl_mat)
         self._plate_key = None
-        self.cfg["vinyl_material"] = self._vinyl_mat["id"]
+        self._vinyl_auto = False            # 手动挑了，本首不再按封面自动配
         skins.remember(self.cfg, self._skin_key(),
                        vinyl=self._vinyl_mat["id"])
         self._toast_text = "唱片材质：%s" % self._vinyl_mat["name"]
@@ -500,13 +504,14 @@ class FullscreenView(QWidget):
         self._vinyl_swap()
         self.title = info.get("title", "") or ""
         self.artist = info.get("artist", "") or ""
-        # 彩胶：先用这首歌记住的选择（用户当时挑的）；没记过就用全局选择 ——
-        # 切歌不会自动乱换，一直保持用户上一次的选择
+        # 彩胶：先看这首歌记住的选择（用户挑过、或上次自动配过）；
+        # 没记住的：等封面到了按主色自动配（_apply_cover_tone）
         memo = skins.recall(self.cfg, self._skin_key())
         mat = vinyl.by_id(memo.get("vinyl")) or vinyl.pick(self.cfg)
         if mat["id"] != self._vinyl_mat["id"]:
             self._vinyl_mat = mat
             self._plate_key = None              # 换材质 → 盘体重画
+        self._vinyl_auto = not vinyl.by_id(memo.get("vinyl"))
         self.duration = float(info.get("duration") or 0.0)
         self.status_text = ""           # 搜索期间留白，不再闪“正在搜索歌词…”
         self._lyrics_ver += 1           # 新歌：布局缓存作废
@@ -621,6 +626,25 @@ class FullscreenView(QWidget):
                        Qt.TransformationMode.SmoothTransformation).copy(0, 0, 640, 640)
         )
         self._bg_push(*self._make_backdrop(img))
+        self._apply_cover_tone(img)          # 没挑过的歌：按封面主色配一张彩胶
+        self.update()
+
+    def _apply_cover_tone(self, img):
+        """按专辑封面主色调自动挑一张彩胶；挑完就记住（和用户手动挑的一样持久）。
+
+        只在“本首还没决定”时生效：用户手动换过、或上次已经配过的歌都不动。
+        """
+        if not self._vinyl_auto:
+            return
+        if not (self.title or self.artist):
+            return                           # 曲目信息还没到，等它到了再配
+        self._vinyl_auto = False             # 无论换不换色，本首只决定一次
+        mat = vinyl.for_cover_color(vinyl.cover_rgb(img))
+        if mat["id"] != self._vinyl_mat["id"]:
+            self._vinyl_swap()
+            self._vinyl_mat = mat
+            self._plate_key = None           # 换材质 → 盘体重画
+        skins.remember(self.cfg, self._skin_key(), vinyl=mat["id"])
         self.update()
 
     def _bg_push(self, bg, alpha=0.0):
@@ -1528,9 +1552,9 @@ class FullscreenView(QWidget):
         hx, hy = VINYL_ARM_HIT
         ax, ay = VINYL_ARM_PIVOT
         # 枢轴不能伸进歌词区（小窗口下自动往回收）；
-        # 也不能太靠上 —— 否则配重会被屏幕顶边裁掉
+        # 也不能太靠上 —— 否则配重会被屏幕顶边裁掉（配重伸到枢轴外 0.25R）
         px = min(cx + R * ax, self.width() * TEXT_X - R * 0.12)
-        py = max(cy + R * ay, R * 0.17)
+        py = max(cy + R * ay, R * 0.30)
         dx, dy = cx + R * hx - px, cy + R * hy - py
         L = math.hypot(dx, dy)
         ang = math.degrees(math.atan2(dy, dx))

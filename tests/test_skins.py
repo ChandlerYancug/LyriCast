@@ -51,11 +51,11 @@ def test_prunes_oldest_over_limit():
     assert "song-%d|a" % (skins.MAX_ENTRIES + 24) in table
 
 
-def test_global_pick_no_random_per_song():
-    """全局选择只看 config：没配就用默认，不随歌变化。"""
+def test_global_pick_defaults_to_black():
+    """没定彩胶时用默认黑胶（不再按歌随机、也不再从 config 固定；
+    按封面自动配见 tests/test_vinyl_color.py）。"""
     assert vinyl.pick({})["id"] == "black"
-    assert vinyl.pick({"vinyl_material": "clear-red"})["id"] == "clear-red"
-    assert vinyl.pick({"vinyl_material": "no-such"})["id"] == "black"
+    assert vinyl.pick()["id"] == "black"
     assert vinyl.by_id("nope") is None
 
 
@@ -65,7 +65,7 @@ TESTS = (
     test_remember_ignores_empty_values,
     test_track_key_normalizes_spaces,
     test_prunes_oldest_over_limit,
-    test_global_pick_no_random_per_song,
+    test_global_pick_defaults_to_black,
 )
 
 

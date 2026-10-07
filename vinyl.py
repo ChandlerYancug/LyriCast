@@ -5,14 +5,16 @@
 闪粉 / 对开 / 镭射……）、**透明度**（透胶能透出背景）、**沟槽表现**
 （浅色片靠阴影、深色片靠反光）和**光泽强度**，按真实彩胶的观感来。
 
-- 选色：按「歌名 + 歌手」做种子随机 —— 每首歌固定一款（像“这张单曲
-  压的是红胶”），换歌才换；也可以在 config 里用 `vinyl_material` 固定。
+- 默认：按**专辑封面主色**自动挑一张（`for_cover_color`），挑完就记进这首歌的
+  记忆（`skins.py`），下次放这首还是它；
+- 用户手动换过（`M` 键 / 托盘）→ 记住用户的选择（也只影响这一首）；
 - 花纹用固定种子的伪随机生成：同一款材质每次都长一样，不会闪。
 - 盘面分三层渲染（见 `render_plate`）：底盘 / 花纹层 / 表层。**花纹层随盘
   旋转，沟槽和反光不转** —— 同心沟槽转了看不出，而反光是打在盘面上的光，
   不该跟着唱片转。三层都缓存，只在尺寸 / 屏幕缩放 / 材质变化时重画。
 """
 
+import colorsys
 import math
 import random
 
@@ -134,12 +136,14 @@ def by_id(mat_id):
     return BY_ID.get(str(mat_id or ""))
 
 
-def pick(cfg):
-    """全局选择：config 里固定过的就用它，否则默认「经典黑胶」。
+def pick(cfg=None):
+    """没定彩胶前的起始色：默认「经典黑胶」。
 
-    不再按歌随机 —— 用户的选译会一直保持（每首歌的专属选择见 skins.py）。
+    彩胶不再在 config 里固定 —— 没记住的歌等封面到了按主色自动配
+    （`for_cover_color`），手动换过的按歌记忆（见 `skins.py`）。
+    参数 cfg 仅为兼容调用处保留。
     """
-    return by_id((cfg or {}).get("vinyl_material")) or BY_ID[MATERIALS[0]["id"]]
+    return BY_ID[MATERIALS[0]["id"]]
 
 
 def has_pattern(mat):
@@ -151,6 +155,75 @@ def next_of(mat):
     """按 M 键手动轮换到下一款。"""
     i = MATERIALS.index(mat) if mat in MATERIALS else 0
     return MATERIALS[(i + 1) % len(MATERIALS)]
+
+
+# --------------------------------------------------------------------------- #
+# 按封面配色（自动模式）
+# --------------------------------------------------------------------------- #
+def cover_rgb(img, size=24):
+    """封面代表色：缩到小块后取“最鲜艳的四成像素”的平均色。
+
+    直接平均会被大片灰底把颜色冲淡；先按“色彩量 = 饱和度 × 明度”
+    排序取彩色部分，既有重点又稳定（确定性，同一张图每次一样）。
+    """
+    im = img.scaled(size, size, Qt.AspectRatioMode.IgnoreAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation)
+    cols = []
+    for y in range(im.height()):
+        for x in range(im.width()):
+            c = im.pixelColor(x, y)
+            if c.alpha() < 128:
+                continue
+            r, g, b = c.red(), c.green(), c.blue()
+            mx = max(r, g, b)
+            sat = 0.0 if mx == 0 else (mx - min(r, g, b)) / float(mx)
+            cols.append((sat * mx, r, g, b))
+    if not cols:
+        return (0, 0, 0)
+    cols.sort(key=lambda t: t[0], reverse=True)
+    top = cols[:max(1, (len(cols) * 2) // 5)]
+    n = float(len(top))
+    return (int(sum(t[1] for t in top) / n + 0.5),
+            int(sum(t[2] for t in top) / n + 0.5),
+            int(sum(t[3] for t in top) / n + 0.5))
+
+
+def for_cover_color(rgb):
+    """按封面色挑一款彩胶：从素色系里挑，花纹款留给手动换。"""
+    r, g, b = [min(255, max(0, int(v))) / 255.0 for v in rgb]
+    h, s, v = colorsys.rgb_to_hsv(r, g, b)
+    hue = h * 360.0
+    if s < 0.14:                                  # 灰调：黑 / 烟熏 / 白
+        if v < 0.30:
+            return BY_ID["black"]
+        if v < 0.62:
+            return BY_ID["smoke"]
+        return BY_ID["white"]
+    if hue < 20 or hue >= 344:                    # 红 / 粉
+        if s < 0.45:
+            return BY_ID["clear-red"]
+        return BY_ID["red"]
+    if hue < 75:                                  # 橙 / 黄 → 琥珀
+        return BY_ID["amber"]
+    if hue < 165:                                 # 绿
+        if s < 0.50:
+            return BY_ID["clear-sea"]
+        return BY_ID["green"]
+    if hue < 200:                                 # 青
+        return BY_ID["clear-sea"]
+    if hue < 262:                                 # 蓝：暗＝星云、淡＝水晶、其它＝霓紫
+        if v < 0.35:
+            return BY_ID["galaxy"]
+        if s < 0.30:
+            return BY_ID["clear"]
+        return BY_ID["purple"]
+    if hue < 300:                                 # 紫
+        if v < 0.40:
+            return BY_ID["galaxy"]
+        return BY_ID["purple"]
+    if s < 0.45 or v > 0.85:                      # 玫红 / 品红
+        return BY_ID["clear-red"]
+    return BY_ID["purple"]
 
 
 # --------------------------------------------------------------------------- #

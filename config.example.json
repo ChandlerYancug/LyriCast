@@ -18,7 +18,6 @@
   "bg_album_art": true,
   "lyrics_offset_sec": 0.0,
   "vinyl_turn_seconds": 12.0,
-  "vinyl_material": "auto",
   "log_to_file": false,
   "media_keys": true,
   "volume_keys_speaker": true,
