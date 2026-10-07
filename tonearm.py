@@ -130,15 +130,8 @@ def draw(p, R, L, skin=None):
                       float(skin.get("bend") or 0.0))
     shape = _taper_shape(path, w0, w1)
 
-    # 盘面上的柔影（光来自左上，影子投在右下；管轴局部 -y 正好是右下方向）
-    p.save()
-    p.translate(0.0, -R * 0.045)
-    p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QColor(0, 0, 0, 62))
-    p.drawPath(_taper_shape(path, w0 * 1.12, w1 * 1.12))
-    p.restore()
-
-    # 管身：垂直于管轴的金属渐变（上暗边 → 高光 → 下暗边），一眼看出是圆管
+    # 管身：垂直于管轴的金属渐变（上暗边 → 高光 → 下暗边），一眼看出是圆管。
+    # 以前还画过一道投影，但细长物体在俯视下的硬边投影看着像“第二支臂”，删了
     g = QLinearGradient(0.0, -w0 / 2.0, 0.0, w0 / 2.0)
     g.setColorAt(0.00, QColor(skin["tube_edge"]))
     g.setColorAt(0.30, QColor(skin["tube_body"]))

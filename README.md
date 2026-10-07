@@ -519,8 +519,8 @@ CI 在 `.github/workflows/ci.yml`：Ubuntu / Windows / macOS × Python 3.11 / 3.
 .venv\Scripts\python dev/build_exe.py      # 产物：dist/LyriCast/（双击 LyriCast.exe）
 ```
 
-打 `v*` tag 会触发 `.github/workflows/release.yml`：自动构建 exe 并挂到对应
-Release；tag 里带 `debug` 的发布为 **pre-release（调试版）**，不覆盖正式版。
+打 `v*` tag 会触发 `.github/workflows/release.yml`：自动构建 Windows exe
+并发布到 Releases 页。
 
 开发脚本（`dev/`）：`make_shots.py` 重新生成 `docs/images/` 里的截图与动图，
 `_transwrap_check.py` 是翻译动画/裁切的渲染回归检查，`debug_speaker.py` 导出音箱原始返回。
