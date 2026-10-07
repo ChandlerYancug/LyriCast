@@ -15,6 +15,7 @@
 """
 
 import colorsys
+import hashlib
 import math
 import random
 
@@ -188,42 +189,64 @@ def cover_rgb(img, size=24):
             int(sum(t[3] for t in top) / n + 0.5))
 
 
-def for_cover_color(rgb):
-    """按封面色挑一款彩胶：从素色系里挑，花纹款留给手动换。"""
+def tone_family(rgb):
+    """封面主色 -> 色调族名（“色系”）。"""
     r, g, b = [min(255, max(0, int(v))) / 255.0 for v in rgb]
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
     hue = h * 360.0
-    if s < 0.14:                                  # 灰调：黑 / 烟熏 / 白
+    if s < 0.14:                          # 灰调
         if v < 0.30:
-            return BY_ID["black"]
+            return "dark"
         if v < 0.62:
-            return BY_ID["smoke"]
-        return BY_ID["white"]
-    if hue < 20 or hue >= 344:                    # 红 / 粉
-        if s < 0.45:
-            return BY_ID["clear-red"]
-        return BY_ID["red"]
-    if hue < 75:                                  # 橙 / 黄 → 琥珀
-        return BY_ID["amber"]
-    if hue < 165:                                 # 绿
-        if s < 0.50:
-            return BY_ID["clear-sea"]
-        return BY_ID["green"]
-    if hue < 200:                                 # 青
-        return BY_ID["clear-sea"]
-    if hue < 262:                                 # 蓝：暗＝星云、淡＝水晶、其它＝霓紫
+            return "gray"
+        return "light"
+    if hue < 20 or hue >= 344:            # 红 / 粉
+        return "pink" if s < 0.45 else "red"
+    if hue < 75:                          # 橙 / 黄
+        return "warm"
+    if hue < 165:                         # 绿
+        return "sea" if s < 0.50 else "green"
+    if hue < 200:                         # 青
+        return "sea"
+    if hue < 262:                         # 蓝
         if v < 0.35:
-            return BY_ID["galaxy"]
+            return "dark"
         if s < 0.30:
-            return BY_ID["clear"]
-        return BY_ID["purple"]
-    if hue < 300:                                 # 紫
-        if v < 0.40:
-            return BY_ID["galaxy"]
-        return BY_ID["purple"]
-    if s < 0.45 or v > 0.85:                      # 玫红 / 品红
-        return BY_ID["clear-red"]
-    return BY_ID["purple"]
+            return "light"
+        return "blue"
+    if hue < 300:                         # 紫
+        return "dark" if v < 0.40 else "violet"
+    if s < 0.45 or v > 0.85:              # 玫红 / 品红偏浅
+        return "pink"
+    return "magenta"
+
+
+# 每个色调族里可以挑的几款（色调定“色系”，族内再换花样）
+_TONE_FAMILIES = {
+    "dark": ("black", "galaxy", "glitter", "smoke"),
+    "gray": ("smoke", "black", "hologram"),
+    "light": ("white", "clear", "hologram"),
+    "pink": ("clear-red", "marble-red", "splatter"),
+    "red": ("red", "clear-red", "marble-red", "split"),
+    "warm": ("amber", "red", "marble-red"),
+    "green": ("green", "glitter", "clear-sea", "splatter"),
+    "sea": ("clear-sea", "clear", "green"),
+    "blue": ("clear", "galaxy", "purple", "hologram"),
+    "violet": ("purple", "galaxy", "glitter"),
+    "magenta": ("purple", "clear-red", "galaxy", "split"),
+}
+
+
+def for_cover_color(rgb, seed=""):
+    """按封面主色挑一款彩胶：色调定色系，seed（歌名|歌手）定族里具体那一款。
+
+    同一张专辑封面 -> 同一个色系，但每首歌会在族里换一款（md5 确定性挑选，
+    相邻歌名也能散得开；同一首歌每次一样）—— 同专辑切歌也能看到唱片换一张。
+    """
+    family = _TONE_FAMILIES[tone_family(rgb)]
+    h = int.from_bytes(hashlib.md5((seed or "").encode("utf-8")
+                                   ).digest()[:4], "little")
+    return BY_ID[family[h % len(family)]]
 
 
 # --------------------------------------------------------------------------- #

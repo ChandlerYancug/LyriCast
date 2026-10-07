@@ -224,12 +224,7 @@ def _draw_counterweight(p, R, skin):
     cols = skin["cw_col"]
     w, h = R * 0.190, R * 0.096          # 长 × 粗
     x0 = -R * 0.245                       # 尾端（负 x = 离唱片更远）
-    # 投影
-    p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QColor(0, 0, 0, 84))
-    p.drawRoundedRect(QRectF(x0 + R * 0.006, -h / 2.0 + R * 0.022,
-                             w, h), h * 0.46, h * 0.46)
-    # 柱体
+    # 柱体（不带投影：俯视画面里细长物体的硬边影子很干扰）
     g = QLinearGradient(0.0, -h / 2.0, 0.0, h / 2.0)
     g.setColorAt(0.0, QColor(cols[0]))
     g.setColorAt(0.45, QColor(cols[1]))
@@ -258,9 +253,6 @@ def _draw_pivot(p, R, skin):
     """轴承座：投影 + 金属顶盖 + 内圈 + 轮廊高光（画在配重之上，盖住交界）。"""
     cols = skin["pivot_col"]
     r = R * 0.060
-    p.setPen(Qt.PenStyle.NoPen)
-    p.setBrush(QColor(0, 0, 0, 92))
-    p.drawEllipse(QPointF(0.0, R * 0.012), r * 1.30, r * 1.30)
     g = QRadialGradient(-r * 0.38, -r * 0.38, r * 1.85)
     g.setColorAt(0.0, QColor(cols[0]))
     g.setColorAt(0.58, QColor(cols[1]))

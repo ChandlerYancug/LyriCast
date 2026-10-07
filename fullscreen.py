@@ -504,14 +504,17 @@ class FullscreenView(QWidget):
         self._vinyl_swap()
         self.title = info.get("title", "") or ""
         self.artist = info.get("artist", "") or ""
-        # 彩胶：先看这首歌记住的选择（用户挑过、或上次自动配过）；
-        # 没记住的：等封面到了按主色自动配（_apply_cover_tone）
+        # 彩胶：这首歌手动换过就直接用；没换过则等封面到了按主色配 ——
+        # 在配好之前先留着上一张的颜色（切歌时不会中间闪一下黑胶）
         memo = skins.recall(self.cfg, self._skin_key())
-        mat = vinyl.by_id(memo.get("vinyl")) or vinyl.pick(self.cfg)
-        if mat["id"] != self._vinyl_mat["id"]:
-            self._vinyl_mat = mat
-            self._plate_key = None              # 换材质 → 盘体重画
-        self._vinyl_auto = not vinyl.by_id(memo.get("vinyl"))
+        mat = vinyl.by_id(memo.get("vinyl"))
+        if mat is not None:
+            if mat["id"] != self._vinyl_mat["id"]:
+                self._vinyl_mat = mat
+                self._plate_key = None          # 换材质 → 盘体重画
+            self._vinyl_auto = False
+        else:
+            self._vinyl_auto = True
         self.duration = float(info.get("duration") or 0.0)
         self.status_text = ""           # 搜索期间留白，不再闪“正在搜索歌词…”
         self._lyrics_ver += 1           # 新歌：布局缓存作废
@@ -630,21 +633,21 @@ class FullscreenView(QWidget):
         self.update()
 
     def _apply_cover_tone(self, img):
-        """按专辑封面主色调自动挑一张彩胶；挑完就记住（和用户手动挑的一样持久）。
+        """按专辑封面主色自动配彩胶；色调定色系、歌名定色系里具体那一款。
 
-        只在“本首还没决定”时生效：用户手动换过、或上次已经配过的歌都不动。
+        只在“本首还没决定”时生效：手动换过的歌（song_skins 有记忆）不动。
+        不写记忆 —— 同一首歌每次配出来都一样（确定性），不需要存。
         """
         if not self._vinyl_auto:
             return
         if not (self.title or self.artist):
             return                           # 曲目信息还没到，等它到了再配
         self._vinyl_auto = False             # 无论换不换色，本首只决定一次
-        mat = vinyl.for_cover_color(vinyl.cover_rgb(img))
+        mat = vinyl.for_cover_color(vinyl.cover_rgb(img), self._skin_key())
         if mat["id"] != self._vinyl_mat["id"]:
             self._vinyl_swap()
             self._vinyl_mat = mat
             self._plate_key = None           # 换材质 → 盘体重画
-        skins.remember(self.cfg, self._skin_key(), vinyl=mat["id"])
         self.update()
 
     def _bg_push(self, bg, alpha=0.0):

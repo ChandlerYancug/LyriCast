@@ -69,6 +69,7 @@ from PyQt6.QtWidgets import QApplication, QInputDialog, QMenu, QSystemTrayIcon
 
 import lyrics as lyrics_mod
 import relclock
+import skins
 import speakers
 import eventing
 import cache
@@ -154,6 +155,9 @@ def load_config():
     prov = cfg.get("provider_order")
     if isinstance(prov, list) and "apple" not in prov:
         cfg["provider_order"] = ["apple"] + [p for p in prov if p != "apple"]
+    # v1.0 皮肤记忆升级：只保留手动换过的彩胶（详见 skins.migrate），
+    # 旧的“自动配”记录清掉、改由按封面主色实时配
+    skins.migrate(cfg)
     return cfg
 
 
