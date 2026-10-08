@@ -536,6 +536,11 @@ class FullscreenView(QWidget):
         self._layout_w = -1.0
         self.update()
 
+    def set_status(self, text):
+        """没歌词时的提示文字（“纯音乐 · 无需歌词”之类）。"""
+        self.status_text = text
+        self.update()
+
     def set_lyrics(self, res):
         if not res:
             self._lines, self._times, self._plain = [], [], []
@@ -1574,14 +1579,14 @@ class FullscreenView(QWidget):
         f = self._font(max(14.0, self.height() * 0.024), heavy=True)
         p.setFont(f)
         p.setPen(QColor(255, 255, 255, 204))
-        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.075,
+        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.088,
                           area.width(), self.height() * 0.048),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                    self.title)
         f2 = self._font(max(12.0, self.height() * 0.018), bold=True)
         p.setFont(f2)
         p.setPen(QColor(255, 255, 255, 116))
-        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.034,
+        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.052,
                           area.width(), self.height() * 0.034),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                    self.artist)
@@ -1865,9 +1870,10 @@ class FullscreenView(QWidget):
         h = pm.height() / dpr
         p.setOpacity(op)
         # 模糊的光晕可能超出歌词区（左缘最明显：字贴着左边界画），
-        # 贴图时把裁剪框按位图留边放宽，不让光晕被切出一条直边
+        # 贴图时把裁剪框按位图留边放宽，不让光晕被切出一条直边；
+        # 但**上边不放宽**：向上滚的行不能探进标题/歌手带（会和歌手名重叠）
         p.save()
-        p.setClipRect(area.adjusted(-pad, -pad, pad, pad))
+        p.setClipRect(area.adjusted(-pad, 0.0, pad, pad))
         p.drawPixmap(QRectF(x, y, w, h), pm, QRectF(pm.rect()))
         p.restore()
         p.setOpacity(1.0)
@@ -1888,7 +1894,7 @@ class FullscreenView(QWidget):
         # 画点前把裁剪框向左放宽（看起来像被黑胶边缘截断的那个问题）
         pad = (DOTS_MAX_SCALE - 1.0) * (total_w / 2.0) + 6.0
         p.save()
-        p.setClipRect(area.adjusted(-pad, -pad, pad, pad))
+        p.setClipRect(area.adjusted(-pad, 0.0, pad, pad))   # 上边不放开（见上）
         p.setPen(Qt.PenStyle.NoPen)
         for i in range(3):
             alpha = round(255.0 * opacity * ops[i])

@@ -263,6 +263,22 @@ _SUFFIX_RE = re.compile(
 )
 _ARTIST_SPLIT_RE = re.compile(u"[,&/\uff0c\u3001;]| feat\\.? | ft\\.? ", re.I)
 
+# 纯音乐 / 伴奏 / 卡拉 OK 这类“没有唱”的曲目：不要去搜歌词 ——
+# 查询会把括号后缀（Instrumental / 伴奏…）当噪声去掉，很容易搜到原唱版
+# 甚至完全不相干的歌词；这类曲目直接显示“纯音乐”就好。
+_INSTRUMENTAL_RE = re.compile(
+    u"instrumental\\b|karaoke|off[\\s-]?vocal|backing track|minus[\\s-]?one|"
+    u"no vocals?|\\binst\\.?\\b|伴奏|纯音乐|純音樂|无人声|無人聲|"
+    u"演奏版|演奏曲|钢琴版|鋼琴版|轻音乐|輕音樂|"
+    u"インスト|オフボーカル|カラオケ",
+    re.I,
+)
+
+
+def is_instrumental(title, album=u""):
+    u"""标题 / 专辑里带“纯音乐 / 伴奏 / Instrumental…”标记 → 不搜歌词。"""
+    return bool(_INSTRUMENTAL_RE.search(u"%s %s" % (title or u"", album or u"")))
+
 
 def _clean(text):
     if not text:
@@ -332,6 +348,8 @@ def fetch_ex(title, artist, album=None, duration=None,
     """
     if not title:
         return None, False
+    if is_instrumental(title, album):
+        return None, False              # 纯音乐：不搜（也不会缓存成“没找到”）
 
     funcs = _provider_funcs()
     had_error = False

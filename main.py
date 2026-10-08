@@ -1316,6 +1316,12 @@ class LyriCastApp(QObject):
         self._last_lyrics = result
         self.overlay.set_lyrics(result)
         self.fullscreen.set_lyrics(result)
+        if result is None and lyrics_mod.is_instrumental(
+                (self.current_track or {}).get("title", ""),
+                (self.current_track or {}).get("album", "")):
+            # 纯音乐 / 伴奏：不搜也不显示歌词（搜到的基本都是不相干的）
+            self.overlay.set_status("纯音乐 · 无需歌词")
+            self.fullscreen.set_status("纯音乐 · 无需歌词")
         self._last_art = art
         if art:
             self._art_key = self._track_key(self.current_track)

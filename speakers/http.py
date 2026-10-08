@@ -13,7 +13,7 @@ import requests
 
 # 换名字/建仓库后改这两行即可
 APP_NAME = "LyriCast"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 UA = "%s/%s (+https://github.com/)" % (APP_NAME, APP_VERSION)
 
 DEFAULT_TIMEOUT = 5.0
