@@ -1579,14 +1579,14 @@ class FullscreenView(QWidget):
         f = self._font(max(14.0, self.height() * 0.024), heavy=True)
         p.setFont(f)
         p.setPen(QColor(255, 255, 255, 204))
-        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.088,
+        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.075,
                           area.width(), self.height() * 0.048),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                    self.title)
         f2 = self._font(max(12.0, self.height() * 0.018), bold=True)
         p.setFont(f2)
         p.setPen(QColor(255, 255, 255, 116))
-        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.052,
+        p.drawText(QRectF(area.left(), area.top() - self.height() * 0.034,
                           area.width(), self.height() * 0.034),
                    Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
                    self.artist)
