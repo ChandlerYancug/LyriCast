@@ -49,9 +49,8 @@ from PyQt6.QtWidgets import QMenu, QWidget
 DEFAULT_FONT = "SF Pro Display"   # 拉丁（随包，最重到 Black）
 DEFAULT_CJK = "Noto Sans SC"       # 中文回退（思源黑体 / Noto CJK，有 Black）
 VINYL_TURN_SECONDS = 12.0
-# 黑胶唱片造型（参考网易云黑胶：盘体沟槽 + 中置标签 + 从右上斜入的唱臂）
-VINYL_COVER_R = 0.58              # 封面（中心标签）半径 / 唱片半径
-VINYL_GROOVE_FROM = 0.63          # 沟槽起始半径 / R（封面外侧留一圈留白）
+# 黑胶唱片造型（参考真唱片比例：标签 ≈ 0.33R，沟槽从 ≈ 0.4R 到近盘边）
+VINYL_COVER_R = 0.35              # 封面（中心标签）半径 / 唱片半径
 VINYL_ARM_PIVOT = (1.05, -1.05)   # 唱臂枢轴（相对盘心，×R；盘外右上）
 VINYL_ARM_HIT = (0.75, -0.30)     # 唱针落点（相对盘心，×R；外圈沟槽区）
 VINYL_ARM_LIFT = 2.6              # 暂停时唱臂抬起（度，向外摆一点）

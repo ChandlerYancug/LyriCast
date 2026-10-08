@@ -33,7 +33,8 @@ from PyQt6.QtGui import (
     QRadialGradient,
 )
 
-GROOVE_FROM = 0.63               # 沟槽起始半径 / R（封面外侧留一圈留白）
+GROOVE_FROM = 0.42               # 沟槽起始半径 / R（真唱片：引出区 ≈ 0.40，
+                                 # 标签 ≈ 0.33；中间留一圈素盘面）
 OUTER = 0.985                    # 沟槽外缘 / R
 
 
@@ -458,7 +459,7 @@ def _grooves(q, R, mat, base_alpha, dark):
     q.setBrush(Qt.BrushStyle.NoBrush)
     r0 = R * GROOVE_FROM
     outer = R * OUTER
-    n = 110                                   # 真唱片的沟槽远不止几十道：
+    n = 170                                   # 真唱片的沟槽远不止几十道：
     for i in range(n):                        # 密到一定程度才读成“纹面”
         t = (i / (n - 1.0)) ** 0.96
         rr = r0 + (outer - r0) * t
